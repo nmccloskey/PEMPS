@@ -1,21 +1,271 @@
 """
 Phylogenetic Evolution of Metabolic Pathway Simulator
-inputs: xpp file, newick string
+author: Nick McCloskey
+last update: 10/22/23
 
-inputs:
-    copasi file
-    newick string
-    user commands: specify above two inputs and several other parameters
 
-output:
-    data file of tabular and graphical info from simulation
+------------
+instructions
+------------
+
+Required packages:
+    os
+    re
+    math
+    random
+    dendropy
+    warnings
+    subprocess
+    numpy
+    pandas
+    seaborn
+    datetime
+    copy - deepcopy
+    matplotlib.pyplot
+
+Required programs:
+    1. COPASI GUI*
+    2. COPASI SE
+    *The GUI version is required only for modifying the 
+    COPASI file so it is not necessary to include in the same directory
+    or even install on the computer where PEMPS is run.
+
+Required files:
+    1. COPASI (.cps) file containing metabolic 
+    model that reaches steady-state.
+    2. Newick or text (.nwk or .txt) file containing
+    rooted phylogeny as Newick string.
+    3. commands.txt file (described below)
+
+All files and programs (except for COPASI GUI) must be 
+saved in the same directory; 
+this directory is also the destination for the output folder.
+
+In COPASI GUI, the COPASI (.cps) file must be modified:
+    1. In the Steady-State Task, the "update model" and "executable"
+    options must be checked.
+    2. In the window opened by clicking on "Report" (bottom right),
+    the options "Append" and "Confirm Overwrite" must be unchecked.
+    Also, a text (.txt) file must be specified after "Filename".
+    3. Save the .cps file.
+These modifications ensure that the program updates initial parameters
+based on mutations, that the SE version of COPASI can execute the 
+Steady-State task via the command line, that the output file is
+continually overwritten as opposed to being appended with new output
+after each calculation of Steady-State, and that this output file
+can be recognized by PEMPS. The user should click "Run" and then check
+the Result section to verify that the selected model reaches steady 
+state. If it doesn't, another model must be selected.
+
+Note: if importing equilibrated root population, the output folder
+must be in the same directory.
+
+-------------
+commands file
+-------------
+Whenever listing, use no spaces to separate list elements.
+Leave no answer blank.
+
+1. Enter file name of .nwk or .txt file containing Newick string.
+    ex) canidaetree.nwk
+
+2. Specify population size(s) as integers.
+   If one number is entered, this will be the size of the population 
+   of all branches. Otherwise, a number for each 
+   branch in order must be entered. The order is the one in which
+   nodes appear in the preliminary_branch_info file. To generate just 
+   this file without any simulation, run the program with inputs of 
+   0 and n to commands 8. and 12 respectively. Prepare an appropriate 
+   list, and rerun the program.
+    ex) 10000
+    ex) 500,700,800,200
+
+3. Enter population ploidy for phylogeny as an integer.
+    ex) 1
+
+4. Enter file name of COPASI (.cps) file containing metabolic model.
+    ex) Kerkhoven.cps
+
+5. Enter names of reactions representing fluxes on which selective 
+pressure operates.
+    ex) pyruvate kinase [CDC19]
+
+6. Enter weights (summing to 1) for each reaction flux specified above.
+These values will determine how determinative each flux is to 
+population fitness.
+    ex) 1
+    ex) 0.4,0.6
+
+7. Enter parameters to be excluded from mutation.
+    ex) Glco
+
+8. Enter number of simulations to run as integer.
+
+9. Enter integer of generations to equilibrate root population. If 0,
+the program will automatically detect equilibration by finding when 
+fitness and 80% of initial conditions and reaction fluxes reach certain
+indicators of flatness when plotted over fixations.
+If the user wishes to override the automatic equilibrium detector, 
+or extend the equilibration for a previously simulated population,
+any other integer can be entered.
+    ex) 100000
+
+10. Enter integer of generations to simulate along the longest line in
+the phylogeny, with other generations numbers determined proportionally
+for branches by their length. If 0, the program will automatically 
+convert branch lengths from millions of years or substitutions per
+site to generations (see methods in accompanying paper).
+    ex) 250000
+
+11. Enter foldername containing previously equilibrated model. The same 
+equilibrated population can be further equilibrated and/or used as the 
+starting point for any other phylogeny. Enter None to start
+equilibrating from file in 4.
+    ex) exp_updates_TEST_Kerkhoven_230523_18.01
+
+12. Enter Y to equilibrate or n to go right to branching simulation.
+
+13. Enter a note for the foldername containing program output.
+    ex) updates TEST Kerkhoven
+
+14. Enter the Steady-State output file name designated during the
+modification of the COPASI file in COPASI GUI.
+    ex) ssoutK.txt
+
+15. Enter parameter names to be excluded from being categorized as
+binding constants. The program searches for parameters containing a 'K'
+in certain contexts among the kinetic parameters to 
+identify binding constants.
+    ex) kc
+
+16. Enter any parameters to be included in the binding constant list
+that may be missed by the automatic search.
+    ex) parameter_3,parameter_97
+
+17. Enter the type of branch length measurement used in the phylogeny as 
+"subs per site" or "mya" (millions of years) or NA, in the
+event that command 10 is not 0.
+    ex) subs per site
+
+18. Enter Y to implement Haldane's constraint or n to go without it.
+
+19. Enter directory to COPASI SE.
+    example windows: /mnt/c/Users/username/bio/copasi/bin/CopasiSE
+    example mac: /Users/username/Downloads/PEMPS/CopasiSE
+
+------
+Output
+------
+output_folder: PEMPS_{experimental note}_{datetime}
+    folders:
+        equilibration_data
+        simulation_{simulation no.}_{datetime}
+    ascii_tree.txt
+        text file of ascii phylogenetic tree from dendropy
+    experimental_log.txt
+        contains commands entered, parameters detected, branching info
+    prelim_branch_info.xlsx
+        pre-simulation node info (Newick substrings, sisters, etc.)
+
+output_folder/equilibration_data
+    folders (all containing line graphs over fixations as .png files):
+        parameters
+            each mutatable model parameter
+            name: {branch}_{parameter name}.png
+                here branch is "root"
+                if a parameter is a specific reaction parameter,
+                root_Reaction_{reaction no.}_{parameter name}.png
+        reaction_fluxes
+            fluxes for each model reaction
+            name: {reaction name}_equilibration.png
+        species_initial_concs
+            initial concentrations for each model species
+            name: conc_{species name}_equilibration.png
+    data tables:
+        equilibration_data.xlsx
+            detailed info for each mutation
+        equilibration_final_row.xlsx
+            the info from the final mutation
+        equilibration_fitness_fluxes_slopes_cvs.xlsx
+            contains line flatness measurements 
+            for auto-detecting equilibration
+    pictures:
+        all_fits.png
+            line graph of each model fitness over fixations
+        equilibration_fit.png
+            line graph of fitness over fixations
+        equilibration fit {flux under selection}.png
+            for each flux under selection,
+            a line graph of fitness over fixations
+        equilibration_fitness_slopes.png
+            slopes of model fitness over fixation check windows
+        equilibration_fitness_cvs.png
+            coefficents of variation of model fitness 
+            over fixation check windows
+        equilibration_pfixes.png
+            histogram of probabilities of fixation for equilibration
+    copasi file:
+        equilibration_final_cps.cps
+            the model, as a copasi file, of the last fixation
+            used in user-extended equilibration
+            or in simulating another tree from equilibrated root
+
+output_folder/simulation_folder
+    folders:
+        branch_data
+            folders:
+                cps_files
+                    models at final fixation for each branch
+                generational_branch_data
+                    .xlsx files like equilibration_data.xlsx
+                    but with mutation info for each branch
+                parameters
+                    like equilibration_data/parameters
+                    but over all mutations (including unfixed)
+                reaction_fluces
+                    like equilibration_data/reaction_fluxes
+                    but over all mutations (including unfixed)
+                species_initial_concs
+                    like equilibration_data/species_initial_concs
+                    but over all mutations (including unfixed)
+            data tables:
+                branch_info.xlsx
+                    additions to prelim_branch_info.xlsx with
+                    simulation info
+                final_branch_data.xlsx
+                    parameters at the end of each branch simulation
+                branch_percent_diffs.xlsx
+                    % difference from ending values of equilibrated
+                    root to end of branch
+                branch_normalized_percent_diffs.xlsx
+                    values from previous file but normalized so that
+                    positive values fall into [0,1]
+                    and negative from [-1,0]
+                branch_heatmap_values.xlsx
+                    the values depicted in the heatmaps
+                    (some parameters eliminated if they show no change)
+            pictures:
+                a few bar graphs for comparing branch attributes
+                    fitness, generations, fixations, (cumulative) length
+                two heatmaps showing normalized percent differences
+                    percent_diff_heatmap_gnuplot2.png
+                    percent_diff_heatmap_PiYG.png
+        line_data
+            same as branch data but only fixation data is included
+            in parameters, reaction fluxes, and initial concentration
+            (no unfxied mutations graphed in these folders)
+    picture:
+        allpfixes.png
+            histogram of probabilities of fixation for all branches
+            during simulation
+
 """
-
 
 
 import os
 import re
 import math
+import random
 import dendropy
 import warnings
 import subprocess
@@ -164,8 +414,9 @@ class Node():
         self.popfit = None
         self.reset = False
         self.errors = []
-        self.fit_slopes_cvs = {}
-        self.fixed_fitnesses = []
+        self.two_perc_rule_gen_thresh = 0
+        self.fixed_eq_check_vals = None
+        self.slopes_cvs = None
 
     def parse_ssout(self):
         """
@@ -298,8 +549,9 @@ class Node():
         prop_fluxes = [fx/flux_prop_dict[fn] for fx,fn in zip(
             self.selection_flux_dict.values(),selection_flux_names)]
         # Calculate normalized fitnesses for each proportionalized flux.
+        # No fitness advantage is achieved by exceeding 1.
         norm_fits = [(1/(1+np.e**(10*(0.5-pfx))) - 0.006692850924284857)
-               /0.9866142981514304 for pfx in prop_fluxes]
+                         /0.9866142981514304 for pfx in prop_fluxes]
         # Adjust fitnesses by weight.
         adj_fits = [ft**wt for ft,wt in zip(norm_fits,fit_weights)]
         # Calculate population fitness.
@@ -323,12 +575,40 @@ class Node():
                     par_dict (dict) : a parameter dictionary
                     kinetic (bool) : identifies the kin_par_dict
             """
-            # select only parameters to be mutated
-            mut_pars = [par for par in par_dict if par not in no_mut_list]
-            for par in mut_pars:
+            # Select only parameters to be mutated.
+            if kinetic:
+                mutatable_params = kin_mut_par_selection
+                num_params = len([par for par in par_dict if par not in no_mut_list])
+            else:
+                mutatable_params = [par for par in par_dict if par not in no_mut_list]
+                # If all kinetic parameters are included in globals,
+                if len(self.kin_par_dict) == 0:
+                    # ensure weighted selection.
+                    mutatable_params.extend(kin_mut_par_selection)
+                num_params = len(mutatable_params)
+            for _ in range(num_params):
                 # Poisson random variable with lambda = 0.003.
                 if np.random.poisson(0.003) == 1:
+                    # Select random parameter.
+                    par = random.choice(mutatable_params)
                     self.mutants.append(par)
+                    # Check if parameter exists in current dict.
+                    if par not in par_dict:
+                        par = extract_parname(par)
+                    # If not, just continue.
+                    if par not in par_dict:
+                        continue
+                    try:
+                        par_prop_counts[par] += 1
+                    except:
+                        try:
+                            # Convert global to kinetic parameter key.
+                            par_prop_counts[glob_to_kin_dict[par]] += 1
+                        except:
+                            pass
+                    # Save old value for Haldane's constraint.
+                    if implement_Haldane == 'Y' and Haldane_rxn_dicts != {}:
+                        old_par_val = par_dict[par]
                     # Mutations tend to make parameters a little worse, 
                     # which for binding constants means larger.
                     loc = mut_change if par in binding_constants \
@@ -347,9 +627,43 @@ class Node():
                             # assign new value to string and dict
                             self.init_conds[names.index(par)] = \
                                 self.glob_par_dict[par]
+                    
+                    if implement_Haldane == 'Y':
+                        # Adjust based on Haldane's constraint.
+                        if kinetic and par in Haldane_params:
+                            try:
+                                # Identify reaction.
+                                rxn_key = re.match(r'Reaction\_\d+(?=\_)',par).group(0)
+                                # Find other parameters in reaction.
+                                for Haldane_dict in Haldane_rxn_dicts[rxn_key]:
+                                    if par in Haldane_dict.values():
+                                        keq = Haldane_dict['Keq']
+                                        vf = Haldane_dict['Vmax']
+                                        ks = Haldane_dict['KS']
+                                        kp = Haldane_dict['KP']
+                                        break
+                                # Reverse Haldane_dict to identify 
+                                # type of binding constant.
+                                rdict = {k:v for v,k in Haldane_dict.items()}
+                                # Adjust counterpart accordingly.
+                                if rdict[par] == 'KS':
+                                    # Solve for reverse reaction rate.
+                                    # Vr = (Vf*KP)/(Keq*KS)
+                                    vr = (par_dict[vf]*par_dict[kp])/(keq_dict[keq]*old_par_val)
+                                    # KP = (Keq*Vr*KS)/Vf
+                                    par_dict[kp] = (keq_dict[keq]*vr*par_dict[ks])/par_dict[vf]
+                                elif rdict[par] == 'KP':
+                                    vr = (par_dict[vf]*old_par_val)/(keq_dict[keq]*par_dict[ks])
+                                    # KS = (Vf*KP)/(Keq*Vr)
+                                    par_dict[ks] = (par_dict[vf]*par_dict[kp])/(keq_dict[keq]*vr)
+                            except:
+                                self.errors.append('Hfail')
+
         # Call subfunction on both parameter dicts.
-        mutate_paramdict(self.glob_par_dict)
-        mutate_paramdict(self.kin_par_dict,kinetic=True)
+        if len(self.glob_par_dict) > 0:
+            mutate_paramdict(self.glob_par_dict)
+        if len(self.kin_par_dict) > 0:
+            mutate_paramdict(self.kin_par_dict,kinetic=True)
 
     def calc_prob_fix(self,old_popfit):
         """
@@ -409,7 +723,8 @@ class Node():
         if parent_node.fix_count > 0:
             # Find fixation index (last mutation that fixed)
             # by reversing 'fix' column and indexing the first True.
-            fixind = parent_node.data['fix'][::-1].index(True)
+            # Add 1 because negative indexing starts at 1.
+            fixind = parent_node.data['fix'][::-1].index(True) + 1
         else:
             # If there are no parental fixations, 
             # just index the last row.
@@ -454,7 +769,7 @@ class Tree():
         print message to screen and logfile
     parse_user_commands():
         read commands.txt file and extract info
-    initial_cps_parse(node):
+    initial_model_parse(node):
         read metabolic model into Node object
     find_branches(exp_path):
         implement phylogeny as Node objects
@@ -499,60 +814,14 @@ class Tree():
         self.line_list = [] # line list
         self.GEN_TO_LENGTH_RATIO = None # generation to length ratio
 
-    # Global functions, nested in Tree object for convenience.
-    global prnt_msg,make_runtime_string,calc_cv,analyze_sims
-
-    def prnt_msg(S):
-        """
-        Print string to screen and logfile.
-
-            Parameter:
-                S (str): Message to print and append to file.
-        """
-        print(S)
-        if write_log_file:
-            with open (logfile,'a') as lf:
-                lf.write(S+'\n')
-
-    def make_runtime_string(start_time,stop_time):
-        """
-        Make runtime component for foldernames.
-
-            Parameters:
-                start_time (datetime.time): starting time
-                stop_time (datetime.time): end time
-            Returns:
-                runtime_string (str): edited time difference info
-        """
-        diff = stop_time - start_time
-        runtime = diff.total_seconds()
-        if runtime / 60 > 1:
-            runtime /= 60
-            if runtime / 60 > 1:
-                runtime /= 60
-                runtime_string = str(round(runtime,1)) + 'hr'
-            else:
-                runtime_string = str(round(runtime,1)) + 'min'
-        else:
-            runtime_string = str(round(runtime,1)) + 'sec'
-        return runtime_string
-
-    def calc_cv(x):
-        """Return coefficient of variation of series/list x."""
-        mu = np.mean(x)
-        # avoid divide by 0
-        if mu == 0:
-            return 0
-        else:
-            return np.std(x) / mu
-
     def parse_user_commands(self):
         """Read in user commands from text file."""
         global ctext,newick_filename,popsizes,ploidy,copasi_filename
         global no_mut_list,excl_binding_list,selection_flux_names
         global selection_flux_labels,fit_weights,num_sims,eq_gens,sim_gens
         global imp_eq_filename,equilibration,exp_note,ssout_file
-        global incl_binding_list
+        global incl_binding_list, branch_length_type, implement_Haldane
+        global copasi_dir_str
 
         # read user commands file
         with open('commands.txt') as cfile:
@@ -601,7 +870,6 @@ class Tree():
         sim_gens = int(re.search(r'(?<=generations to branch: )\d+?(?=\n)',
                              ctext).group(0))
         # import old equilibration
-
         imp_eq_filename = re.search(
             r'(?<=experiment foldername containing old equilibration to import \(can enter None\): ).+?(?=\n)',
             ctext).group(0)
@@ -613,8 +881,17 @@ class Tree():
                             ctext).group(0).replace(' ','_')
         # outfile name
         ssout_file = re.search(r'(?<=outfile name: ).+?(?=\n)',ctext).group(0)
-    
-    def initial_cps_parse(self,node):
+        # Type of branch length.
+        branch_length_type = re.search(r'(?<=branch lengths measured in \(enter subs per site or mya or NA\)\: ).+?(?=\n)',
+                                       ctext).group(0)
+        # Haldane's constraint.
+        implement_Haldane = re.search(r'(?<=Haldane \(Y/n\): )\w',
+                                  ctext).group(0)
+        # COPASI SE directory.
+        copasi_dir_str = re.search(r'(?<=SE directory: ).+(?=\n)',
+                                  ctext).group(0)
+ 
+    def initial_model_parse(self,node):
         """
         Parse cps file and steady state output file.
 
@@ -623,10 +900,11 @@ class Tree():
                     the node whose copasi file to parse
         """
 
-        global copasi_filename,keq_dict,binding_constants,no_mut_list,init_vals
+        global copasi_filename,keq_dict,binding_constants,init_vals #,no_mut_list
         global names,sstext,spec_names,spec_labels,spec_concs_labels,NUM_FLUXES
         global rxn_names,selection_flux_names,selection_flux_labels
         global first_columns,mut_pars,data_labels,zerolist,kin_names
+        global Haldane_rxn_dicts,Haldane_rxns,Haldane_params, all_pars
 
         # Extract parameters from model.
         with open(copasi_filename,encoding='utf8') as cpsfile:
@@ -635,8 +913,8 @@ class Tree():
         keq_dict,kin_par_dict = {},{}
         # binding constant list, zerolist, name and kinetic name list.
         binding_constants,zerolist,names,kin_names = [],[],[],[]
-        # List of parameters to exclude from mutation.
-        no_mut_list = []
+        # # List of parameters to exclude from mutation.
+        # no_mut_list = []
         # Object references.
         obj_refs = [m.group(0) for m in \
                    re.finditer(r'(?<=objectReference=\").+?(?=\")',model)]
@@ -652,7 +930,7 @@ class Tree():
                     r'(?<=key=\"{}\"\sname=\").+?(?=\")'.format(objref),
                     model).group(0))
             except:
-                ...
+                pass
         # Assume first is model start time and exclude.
         glob_par_dict = {n:v for n,v in zip(names[1:],init_vals[1:])}
         # Loop through each reaction section in cps file.
@@ -665,6 +943,7 @@ class Tree():
             for m2 in re.finditer(r'(?<=name=\").+?(?=\"/>)',rxn_text):
                 kname,kval = m2.group(0).split('" value="')
                 kin_names.append(kname)
+                # rxn_keys.append(rxn_key)
                 kpdkey = rxn_key+'_'+kname
                 kin_par_dict[kpdkey] = float(kval)
                 # Exclude designated parameters from mutation.
@@ -673,6 +952,16 @@ class Tree():
                 # Include designated parameters in binding constant list.
                 if kname in incl_binding_list:
                     binding_constants.append(kname)
+                # # If parameter is Vmax,
+                # if re.search(r'(\_|^)v\w*(\_|$)',kname,re.IGNORECASE) != None:
+                #     # Add to proposal count dict
+                #     if not kname.endswith('max'):
+                #         par_prop_counts[kpdkey+'_max'] = 0
+                #     else:
+                #         par_prop_counts[kpdkey] = 0
+                # # Otherwise represent parameter once
+                # elif re.search(r'keq',kname,re.IGNORECASE) == None:
+                #     par_prop_counts[kpdkey] = 0
         # Winnow the parameter dicts.
         def winnow(pard):
             """
@@ -684,7 +973,7 @@ class Tree():
                         parameter dict
             """
 
-            global keq_dict,binding_constants,no_mut_list
+            global keq_dict,binding_constants # ,no_mut_list
             for par in pard:
                 # Find equilibrium constants to avoid mutating them.
                 if re.search(r'keq',par,re.IGNORECASE) != None:
@@ -694,22 +983,23 @@ class Tree():
                              par,re.IGNORECASE) != None:
                     if par not in excl_binding_list:
                         binding_constants.append(par)
-                # Exclude certain parameters.
-                for no_mut in no_mut_list:
-                    if re.search(r'([^\w]|^){}([^\w]|$)'.format(no_mut),
-                                 par,re.IGNORECASE) != None:
-                        no_mut_list.append(par)
+                # # Exclude certain parameters.
+                # for no_mut in no_mut_list:
+                #     if re.search(r'([^\w]|^){}([^\w]|$)'.format(no_mut),
+                #                  par,re.IGNORECASE) != None:
+                #         no_mut_list.append(par)
                 # Values of 0 do not mutate.
                 if pard[par] == 0:
                     zerolist.append(par)
         # Winnow both parameter dicts.
         winnow(glob_par_dict)
         winnow(kin_par_dict)
-        # # Write binding constants to logfile.
-        # if write_log_file:
-        #     with open (logfile,'a') as lf:
-        #         lf.write('\nbinding constants: '\
-        #                  +str(binding_constants)+'\n'+'\n')
+        
+        # Write binding constants to logfile.
+        if write_log_file:
+            with open (logfile,'a') as lf:
+                lf.write('\nbinding constants: '\
+                         +str(binding_constants)+'\n'+'\n')
         # Find parameters whose values must be manipulated indirectly
         # through a formula. 
         # Get names of such parameters from all metabolite groups.
@@ -723,7 +1013,7 @@ class Tree():
                 ind = ipname.index('\\')
                 ind_par_names[i] = ipname[:ind] + ipname[ind+1:]
             except:
-                ...
+                pass
         # Find values.
         ind_par_vals = [
             float(re.search(r'\d+?(\.\d*?)?(?=/&lt;)',seg).group(0)) \
@@ -739,14 +1029,139 @@ class Tree():
                 re.search(r'(?<=Values\[).+?(?=\])',rp).group(0)\
                       for rp in redundant_pars}
         # Remove redundancies.
+        # Also make dict to translate global to kinetic parameters
+        # for par_prop_count dict.
+        global glob_to_kin_dict
+        glob_to_kin_dict = {}
         old_kin_par_dict = dc(kin_par_dict)
         for rpar in redundant_par_dict:
             for k in old_kin_par_dict:
                 if re.search(r'Reaction\_\d+?\_{}'.format(rpar),k) != None:
                     try:
                         del kin_par_dict[k]
+                        glob_to_kin_dict[rpar] = k
                     except:
-                        ...
+                        pass
+        
+        #TEST#
+        global kin_mut_par_selection
+        # List to ensure that the ratio of no. mutational proposals to Vmax parameters to no. mutational proposals to other reaction parameters is approximately 1, in keeping with the idea that an enzyme has equivalent numbers of sites that affect enzyme expression and other reaction parameters.
+        kin_mut_par_selection = []
+        # Dict for counting mutation proposals for each parameter.
+        global par_prop_counts
+        par_prop_counts = {}
+        global rxn_keys
+        rxn_keys = []
+        # # Object references.
+        # obj_refs = [m.group(0) for m in \
+        #             re.finditer(r'(?<=objectReference=\").+?(?=\")',model)]
+        # # Find parameter names with object references.
+        # names = []
+        # for objref in obj_refs:
+        #     try:
+        #         names.append(re.search(
+        #             r'(?<=key=\"{}\"\sname=\").+?(?=\")'.format(objref),
+        #             model).group(0))
+        #     except:
+        #         pass
+        # obj_ref to name dict
+        objref_name_dict = {o:n for o,n in zip(obj_refs,names)}
+        # dict, keyed by reaction key, for list of dicts, keyed by Haldane params
+        Haldane_rxn_dicts = {}
+        # list of parameters that can comply with Haldane's constraint
+        Haldane_params = []
+        # list of reactions with such parameters
+        Haldane_rxns = []
+        # Reaction sections.
+        rxn_sects = [m1.group (0) for m1 in re.finditer(
+            r'<Reaction key=.+?</Reaction>',model,re.DOTALL)]
+        # within reaction sections,
+        for rxn_section in rxn_sects:
+            rxn_key = re.search(r'(?<=key=\").+?(?=\")',rxn_section).group(0)
+            rxn_keys.append(rxn_key)
+            # Find names of reaction parameters.
+            # rxn_par_names = [m.group(0) for m in re.finditer(r'(?<=name=\").+?(?=\")',rxn_section)]
+            rxn_par_names = [m2.group(0).split('" value="')[0] for m2 in re.finditer(r'(?<=name=\").+?(?=\"/>)',rxn_section)]
+            
+            for rp in rxn_par_names:
+                par = rxn_key + '_' + rp
+                # If parameter is Vmax,
+                if re.search(r'(\_|^)v\w*(\_|$)',rp,re.IGNORECASE) != None:
+                    # Represent it once for itself, and once for every 
+                    # other param in rxn
+                    # (excluding keq which doesn't mutate).
+                    # One representation represents kcat, so count(Vmax)
+                    # is 1 greater than count(non-keq-non-vmax params).
+                    kin_mut_par_selection.extend([par]*(len(rxn_par_names)-1))
+                    # Add to proposal count dict
+                    par_prop_counts[par] = 0
+                # Otherwise represent parameter once
+                elif re.search(r'keq',rp,re.IGNORECASE) == None:
+                    kin_mut_par_selection.append(par)
+                    par_prop_counts[par] = 0
+
+            # Collect parameters to implement Haldane's constraint.
+            if implement_Haldane == 'Y':
+                try:
+                    # find substrates and products in ListOFpass
+                    # substrate section and product section
+                    substrate_sect = re.search(r'<ListOfSubstrates.+?</ListOfSubstrates',rxn_section,re.DOTALL).group(0)
+                    product_sect = re.search(r'<ListOfProducts.+?</ListOfProducts',rxn_section,re.DOTALL).group(0)
+                    # object references aka metabolite ids, assume that S1,P1 and S2,P2 are paired by order
+                    substrate_obj_refs = [m.group(0) for m in re.finditer(r'(?<=metabolite=\").+?(?=\")',substrate_sect)]
+                    product_obj_refs = [m.group(0) for m in re.finditer(r'(?<=metabolite=\").+?(?=\")',product_sect)]
+                    # Check that length matches and is above 0 ----
+                    if len(substrate_obj_refs) == len(product_obj_refs) > 0:
+                        # substrate strings to search rxn pars for
+                        substrate_strs = [re.sub(r'\_\w','',objref_name_dict[s]) for s in substrate_obj_refs]
+                        product_strs = [re.sub(r'\_\w','',objref_name_dict[p]) for p in product_obj_refs]
+                        # find keq and vmax
+                        rxn_keq = rxn_vmax = None
+                        for rpn in rxn_par_names:
+                            try:
+                                keq = re.search(r'keq',rpn,re.IGNORECASE).group(0)
+                                if keq != None:
+                                    rxn_keq = rxn_key + '_' + rpn
+                            except:
+                                pass
+                            try:
+                                vmax = re.search(r'(\_|^)v\w*(\_|$)',rpn,re.IGNORECASE).group(0)
+                                if vmax != None:
+                                    rxn_vmax = rxn_key + '_' + rpn
+                            except:
+                                pass
+                        if rxn_keq != None and rxn_vmax != None:
+                            rxn_dicts = []
+                            for substrate,product in zip(substrate_strs,product_strs):
+                                Haldane_dict = {'Keq':rxn_keq,'Vmax':rxn_vmax}
+                                for rpn in rxn_par_names:
+                                    try:
+                                        ks = re.search(r'k(m)?(\_)?{}'.format(substrate),rpn,re.IGNORECASE).group(0)
+                                        if ks != None:
+                                            Haldane_dict['KS'] = rxn_key + '_' + rpn
+                                    except:
+                                        pass
+                                    try:
+                                        kp = re.search(r'k(m)?(\_)?{}'.format(product),rpn,re.IGNORECASE).group(0)
+                                        if kp != None:
+                                            Haldane_dict['KP'] = rxn_key + '_' + rpn
+                                    except:
+                                        pass
+                                if len(Haldane_dict) == 4:
+                                    rxn_dicts.append(Haldane_dict)
+                                    Haldane_params.extend(list(Haldane_dict.values()))
+                            if len(rxn_dicts) > 0:
+                                Haldane_rxn_dicts[rxn_key] = rxn_dicts
+                                Haldane_rxns.append(rxn_key)
+                except:
+                    pass        
+        
+        # Make it clear what the program has detected.
+        prnt_msg('\nglobal parameters: ' + str(glob_par_dict) +'\n')
+        prnt_msg('\nkinetic parameters: ' + str(kin_par_dict) + '\n')
+        prnt_msg('\nkinetic parameter mutation list: ' + str(kin_mut_par_selection) + '\n')
+        prnt_msg('\nHaldane reaction dicts: ' + str(Haldane_rxn_dicts) + '\n')
+        
         # Read steady state output file.
         with open(ssout_file) as file:
             sstext = file.read()
@@ -773,7 +1188,7 @@ class Tree():
             r'No steady state with given resolution was found!',
             sstext) != None:
             # Model found no steady state.
-            prnt_msg('Steady state cannot be calculated.'+
+            prnt_msg('Steady state cannot be calculated. '+
                      'Another model must be selected.')
             exit()
         if re.search(
@@ -802,14 +1217,26 @@ class Tree():
         # First row of data dict.
         first_columns = ['fix','gens','fit','sc','pfix','mutants','errors']
         # Mutatable paramters.
-        mut_pars = list(ind_par_dict.keys())+list(kin_par_dict.keys())
+        all_pars = list(glob_par_dict.keys())+list(ind_par_dict.keys())+list(kin_par_dict.keys())
+        mut_pars = [mp for mp in all_pars if mp not in no_mut_list]
+
+        #TEST#
+        # print('mut pars ({}): {}\n'.format(len(mut_pars),mut_pars))
+        # print('kin mut par selection({}): {}'.format(len(kin_mut_par_selection),kin_mut_par_selection))
+        # print('no mut list:',no_mut_list)
+        # print('species labels:',spec_labels)
+        # print('global param keys',glob_par_dict.keys())
+
         # Data column labels
         data_labels = first_columns+selection_flux_labels\
-            +spec_concs_labels+rxn_names+mut_pars
+            +spec_concs_labels+rxn_names+all_pars
+            # +spec_concs_labels+rxn_names+mut_pars
+            
         # Data values.
         empty_vals = [None]*(len(first_columns+selection_flux_labels)-1)
         data_vals = [True]+empty_vals+spec_concs+rxn_fluxes+\
-            list(ind_par_dict.values())+list(kin_par_dict.values())
+            list(glob_par_dict.values())+list(ind_par_dict.values())+list(kin_par_dict.values())
+
         # Data dictionary.
         data = {k:[v] for k,v in zip(data_labels,data_vals)}
         # Assign attributes to node.
@@ -865,11 +1292,11 @@ class Tree():
                     # Branch length is number following colon.
                     new_node.length = float(name[name.index(':')+1:])
                 except:
-                    ...
+                    pass
                 new_node.external_index = ei
                 self.branch_list.append(new_node)
             except:
-                ...
+                pass
         # Find internal nodes, which have matching parentheses.
         # Open parenthesis starting indices.
         open_par_inds = [m.span()[0] for m in re.finditer(r'\(',newick_string)]
@@ -902,14 +1329,14 @@ class Tree():
                             newick_string[substring_stop:]).group(0)[1:-1]
                 new_node.length = float(length)
             except:
-                ...
+                pass
             # Extract concordance factor - number after newick substring.
             try:
                 conc_factor = re.search(r'.+?:',
                             newick_string[substring_stop:]).group(0)[1:-1]
                 new_node.conc_factor = float(conc_factor)
             except:
-                ...
+                pass
             self.branch_list.append(new_node)
         # Remove duplicates.
         for branch1 in self.branch_list:
@@ -964,10 +1391,16 @@ class Tree():
                      ' defaulting to population size of 1000 for all branches')
             for branch in self.branch_list:
                 branch.popsize = 1000
+        # Find cumulative branch lengths.
+        for node in self.branch_list[1:]:
+            # Sum lengths of all ancestors.
+            cum_length = sum([self.branch_dict[n].length for n in [node.num] \
+                       + node.ancestors if self.branch_dict[n].length != None])
+            node.cum_length = cum_length
         # Make branch info dataframe.
-        branch_attributes = ['name','length','conc_factor','type',
-                             'ancestors','parent','descendants','children',
-                             'sister','popsize']
+        branch_attributes = ['name','length','cum_length','conc_factor',
+                             'type','ancestors','parent','descendants',
+                             'children','sister','popsize']
         dfdict = {at:[node.__dict__[at] for node in self.branch_list]\
                    for at in branch_attributes}
         binfodf = pd.DataFrame(dfdict)
@@ -977,7 +1410,7 @@ class Tree():
     def populate(self):
         """Set up initial population."""
         global flux_prop_dict, copasi_filename
-        global slope_keys, cv_keys, fit_eq_check_labs
+        global slope_keys, cv_keys, fit_eq_check_labs, eq_check_vals
         if imp_eq_filename != 'None':
             # Import equilibration.
             prnt_msg('importing root population from {}'\
@@ -993,10 +1426,11 @@ class Tree():
             with open(copasi_filename,'w',encoding='utf8') as ncps:
                 ncps.write(self.branch_dict[0].model)
         # Run file and make steady state output file.
-        subprocess.run(['./cop/bin/CopasiSE', copasi_filename, '-s',
-                         copasi_filename, '--nologo'])
+        # subprocess.run([copasi_dir_str, copasi_filename, '-s',
+        #                  copasi_filename, '--nologo'])
+        subprocess.run([copasi_dir_str, copasi_filename, '-s','--nologo'])
         # First parse.
-        self.initial_cps_parse(self.branch_dict[0])
+        self.initial_model_parse(self.branch_dict[0])
         if imp_eq_filename != 'None':
             # Extract info from import.
             self.import_equilibrated_root()
@@ -1017,8 +1451,12 @@ class Tree():
             self.branch_dict[0].data['fit'] = [self.branch_dict[0].popfit]
             for FRXNl,ft in zip(selection_flux_labels,fits):
                 self.branch_dict[0].data[FRXNl] = [ft]
-        # Prepare slopes and coefficients of variation dict.
-        self.branch_dict[0].fit_slopes_cvs = {'fit_slope':[], 'fit_cv':[]}
+        # List of fitness and fluxes.
+        eq_check_vals = ['fit'] + rxn_names + spec_concs_labels
+        # Create dataframe for fixed fitness and fluxes.
+        self.branch_dict[0].fixed_eq_check_vals = pd.DataFrame(columns=eq_check_vals)
+        # And for slopes and cvs.
+        self.branch_dict[0].slopes_cvs = pd.DataFrame(columns=[s1+s2 for s1 in ['slope_','cv_'] for s2 in eq_check_vals])
 
     def simulate(self,node):
         """
@@ -1029,34 +1467,48 @@ class Tree():
                     branch along which to simulate evolution
         """
         
-        global Total_gens,total_gens
+        global Total_gens,total_gens,eq_gens
+        # Loop over generations.
+        gi = 0
+        # Root node treated specially.
         if node.type == 'root':
             # Create starting population for root node.
             self.populate()
-            # Create counters for simulation progress.
-            tgens1 = start = node.gens
-            # node.gens = Tgens1 = node.gens + eq_gens
-            # maximum of 1 million generations to equilibrate
-            if eq_gens != 0:
-                node.gens = Tgens1 = node.gens + 1e6
+            # Create counter for simulation progress.
+            tgens1 = node.gens
+            # Check if equilibration is required.
+            if equilibration == 'Y':
+                prnt_msg('equilibrating root population')
+                if eq_gens == 0:
+                    # Maximum of 1e6 generations to equilibrate.
+                    node.gens = Tgens1 = node.gens + 1e6
+                else:
+                    # User-defined number of generations.
+                    imp_eq_gens = node.gens
+                    gi = imp_eq_gens
+                    node.gens = Tgens1 = eq_gens
             else:
+                prnt_msg('not equilibrating root population')
                 node.gens = 0
             # Set fixation count to imported value.
             node.fix_count = node.imp_fix_count
-            # Boolean for detecting equilibrium.
-            fit_eq_detected = False
+            # Booleans for detecting equilibrium.
+            fit_eq_detected = flux_eq_detected = False
+            # Flatness check boolean list.
+            flatness_checks = [False] * len(eq_check_vals)
+            # Boolean for finding threshold,
+            two_perc_rule_thresh_found = False
+            # And for equilibrium detection.
+            eq_detected = False
         else:
             # Write relevant model to file.
             node.update_cps()
             # Dummy vars for counters.
             Tgens1 = Total_gens
             tgens1 = total_gens
-            start = 0
         # This function must leave a node with a viable model.
         model_at_last_fixation = node.model
-        # Loop over generations.
-        gi = 0
-        # for gi in range(start,node.gens):
+        # Loop until required generations or equilibraton reached.
         while gi < node.gens:
             # Increment counter, reset the reset and errors.
             gi += 1
@@ -1082,8 +1534,8 @@ class Tree():
                 # Write new mutations to model.
                 node.update_cps()
                 # Run steady state calculation and update model.
-                _ = subprocess.run(['./cop/bin/CopasiSE', copasi_filename,
-                     '-s', copasi_filename, '--nologo'],capture_output=True)
+                _ = subprocess.run([copasi_dir_str, copasi_filename,
+                     '-s','--nologo'],capture_output=True)
                 # Read model updates back into python.
                 with open(copasi_filename,encoding='utf8') as cpsfile:
                     node.model = cpsfile.read()
@@ -1104,6 +1556,7 @@ class Tree():
                 data_vals = [fixation,gi,node.popfit,sel_coeff,
                              prob_fix,node.mutants,errors] + fits \
                             + node.spec_concs+node.rxn_fluxes \
+                            + list(node.glob_par_dict.values()) \
                             + list(node.ind_par_dict.values()) \
                             + list(node.kin_par_dict.values())
                 for k,v in zip(data_labels,data_vals):
@@ -1123,86 +1576,189 @@ class Tree():
                     with open(copasi_filename,'w',encoding='utf8') as file:
                         file.write(node.model)
                     # Rerun model.
-                    _ = subprocess.run(['./cop/bin/CopasiSE', copasi_filename, 
-                        '-s', copasi_filename, '--nologo'],capture_output=True)
+                    _ = subprocess.run([copasi_dir_str, copasi_filename, 
+                        '-s','--nologo'],capture_output=True)
                 else:
                     # Increment counter.
                     node.fix_count += 1
                     # Set model.
                     model_at_last_fixation = node.model
-                    # Add fixation value for equilibrium check.
-                    node.fixed_fitnesses.append(node.popfit)
-                    # Record data to check for fitness equilibrium.
-                    if node.type == 'root' and not fit_eq_detected:
-                        if len(node.fixed_fitnesses) % eq_check == 0:
+                    # Equilibrium detection for root node.
+                    if node.type == 'root':
+                        # Add fixation values for equilibrium check.
+                        node.fixed_eq_check_vals.loc[node.fix_count-1] = [node.popfit] + node.rxn_fluxes + node.spec_concs
+                        # Fixation threshold check.
+                        df_len = len(node.fixed_eq_check_vals)
+                        # Find slope of line of best fit
+                        # and cv for fitness and reaction fluxes.
+                        if df_len % eq_check == 0:
+                            # Empty lists for slopes and cvs.
+                            slopes = []
+                            cvs = []
                             # Empty array of length of fixations to check.
                             X = np.arange(eq_check)
-                            # Select last eq_check number of 
-                            # fitness values for fitness.
-                            Y = node.fixed_fitnesses[-eq_check:]
-                            # Find slope and coefficient of variation.
-                            node.fit_slopes_cvs['fit_slope'].append(
-                                abs(np.polyfit(X,Y,1)[0])
-                            )
-                            node.fit_slopes_cvs['fit_cv'].append(calc_cv(Y))
-                            # Check for fitness equilibrium.
-                            num_windows = len(node.fit_slopes_cvs['fit_slope'])
-                            if num_windows % window_check == 0:
+                            # Loop over each fit/flux value to check.
+                            for f in eq_check_vals:
+                                # Select last eq_check number of values.
+                                Y = node.fixed_eq_check_vals.loc[df_len-eq_check:df_len,f]
+                                # Find slope and cv.
+                                slopes.append(abs(np.polyfit(X,Y,1)[0]))
+                                cvs.append(calc_cv(Y))
+                            # Update slopes/cvs dataframe.
+                            windows = len(node.slopes_cvs)
+                            node.slopes_cvs.loc[windows] = slopes + cvs
+                            # Check for fitness and majority flux equilibrium.
+                            if windows > window_check:
+                                df_len = len(node.slopes_cvs)
                                 # Empty array of length of fixations to check.
                                 zeros = np.zeros(window_check)
-                                # Slope and CV values
-                                slope_vals = node.fit_slopes_cvs['fit_slope'][-window_check:]
-                                cv_vals = node.fit_slopes_cvs['fit_cv'][-window_check:]
-                                # Check for nearness to 0.
-                                slope_win_check = np.isclose(slope_vals,zeros,atol=1e-7)
-                                cv_win_check = np.isclose(cv_vals,zeros,atol=1e-6)
-                                # Print to logfile.
-                                prnt_msg('Slopes: {}/{}, and CVs: {}/{} windows close to 0{}'.format(
-                                    sum(slope_win_check),window_check,sum(cv_win_check),window_check,' '*25))
-                                # Equilibrium reached if these values are
-                                # consistently close to 0.
-                                slopes_close_to_0 = cvs_close_to_0 = False
-                                if sum(slope_win_check) == window_check:
-                                    prnt_msg('Slopes close to 0')
-                                    slopes_close_to_0 = True
-                                if sum(cv_win_check) == window_check:
-                                    prnt_msg('CVs close to 0')
-                                    cvs_close_to_0 = True
-                                if slopes_close_to_0 and cvs_close_to_0:
-                                    prnt_msg('Fitness equilibrium detected')
-                                    # Continue equilibrating for 25%
-                                    # more generations than have
-                                    # already transpired
-                                    node.gens = 1.25 * gi
-                                    fit_eq_detected = True
-                if node.type == 'root':    
-                    # Continuous print statement to display progress.
-                    print(('generation {}, fixations: {}, resets: {},'
-                        + ' fit: {}{}').format(gi,node.fix_count,
-                        node.rev_count,node.popfit,' '*20),end='\r')
-                else:
-                    # Continuous print statement to display progress.
-                    print(('generation {}/{}, fixations: {}, resets: {},'
-                        + ' fit: {}, progress: {}%{}')\
-                            .format(gi,node.gens,node.fix_count,node.rev_count,node.popfit,
-                                    round(tgens1/Tgens1*100,3),' '*20),end='\r')
+                                # Empty list for window check booleans.
+                                flatness_checks = []
+                                # Loop over each fit/flux value,
+                                # select last window_check number
+                                # of values for slope and cvs,
+                                # and check nearness to 0.
+                                for f in eq_check_vals:
+                                    if f == 'fit':
+                                        slope_tol = 1e-5
+                                        cv_tol = 1e-4
+                                    else:
+                                        slope_tol = 1e-3
+                                        cv_tol = 0.1
+                                    c = 'slope_' + f
+                                    slopes = node.slopes_cvs.loc[
+                                        df_len-window_check:df_len,c]
+                                    slope_win_check = np.isclose(slopes,zeros,
+                                                                atol=slope_tol)
+                                    c = 'cv_' + f
+                                    cvs = node.slopes_cvs.loc[
+                                        df_len-window_check:df_len,c]
+                                    cv_win_check = np.isclose(cvs,zeros,
+                                                              atol=cv_tol)
+                                    # If slopes and cvs are close to 0 for
+                                    # the last window_check number of windows, 
+                                    # then indicate that flatness (equilibrium) 
+                                    # has been detected for this fit/flux value.
+                                    if sum(slope_win_check) == \
+                                        sum(cv_win_check) == window_check:
+                                        # Flat enough.
+                                        flatness_checks.append(True)
+                                        # Fitness equilibrium detected separately.
+                                        if f == 'fit' and not fit_eq_detected:
+                                            fit_eq_detected = True
+                                            prnt_msg(('\nfitness equilibrium '
+                                                      + 'detected\n'))
+                                    else:
+                                        flatness_checks.append(False)
+                                # Check proportion of fit/flux values 
+                                # that have flattened out.
+                                if sum(flatness_checks)/len(flatness_checks) \
+                                    >= 0.8 and not flux_eq_detected:
+                                    # Majority flux equilibrium reached.
+                                    flux_eq_detected = True
+                                    prnt_msg(('\nmajority flux equilibrium '
+                                              + 'detected\n'))
+                                # Trigger break out of loop.
+                                if fit_eq_detected and flux_eq_detected and not eq_detected:
+                                    eq_detected = True
+                                    # Keep equilibrating for as many gens
+                                    # as have transpired.
+                                    if node.gens < 500_000:
+                                        node.gens = gi * 2
+                                    # Switch continuous print statement.
+                                    eq_gens = imp_eq_gens = 0
+                                    prnt_msg(('\nequilibrium detected '
+                                              + 'at generation {}\n').format(gi))
+                        # Find no. generations concordant with 2% rule.
+                        if not two_perc_rule_thresh_found:
+                            # Create dataframe of mutation proposal counts.
+                            prop_count_df = pd.DataFrame(par_prop_counts,
+                                                         index=[0])
+                            # Identify Vmax parameters and find mean of counts.
+                            vmax_cols = [c for c in prop_count_df.columns \
+                                         if re.search(r'(\_|^)v\w*(\_|$)',
+                                                      c,re.IGNORECASE) != None]
+                            vmax_prop_mean = prop_count_df[
+                                vmax_cols].mean(axis=1)[0]
+                            # Same with non-Vmax parameters.
+                            other_par_prop_mean = np.mean([sum([
+                                prop_count_df.loc[0,c] for c in \
+                                prop_count_df.columns if \
+                                re.match(r'{}_'.format(r),c) != None 
+                                and c not in vmax_cols]) for r in rxn_keys])
+                            # Average of means must be at least 7.
+                            if (vmax_prop_mean+other_par_prop_mean)/2 >= 7:
+                                # Establish threshold from 
+                                # current generation number.
+                                node.two_perc_rule_gen_thresh = gi
+                                two_perc_rule_thresh_found = True
+                                prop_count_df.to_excel(os.getcwd()+exp_path
+                                                       +'par_prop_count.xlsx')
+                                prnt_msg(('\nNo. generations that results in '
+                                          + 'adequate no. proposals: {}{}\n')\
+                                            .format(gi,' '*20))
+                                prnt_msg('\nvmax mean: {}, other mean: {}{}\n'.\
+                                         format(vmax_prop_mean,
+                                                other_par_prop_mean,' '*20))
+
+            if node.type == 'root' and eq_gens == 0:    
+                # Continuous print statement to display progress.
+                print(('generation {}, fixations: {}, resets: {},'
+                    + ' fit: {}, equilibration: {}/{} values{}').format(gi,node.fix_count,
+                    node.rev_count,node.popfit,sum(flatness_checks),len(flatness_checks),' '*20),end='\r')
+            elif node.type == 'root' and eq_gens != 0:
+                print(('generation {}/{}, fixations: {}, resets: {},'
+                    + ' fit: {}, progress: {}%{}').format(gi,node.gens,node.fix_count,
+                    node.rev_count,node.popfit,round((gi-imp_eq_gens)/(eq_gens-imp_eq_gens)*100,3),' '*20),end='\r')
+            else:
+                # Continuous print statement to display progress.
+                print(('generation {}/{}, fixations: {}, resets: {},'
+                    + ' fit: {}, progress: {}%{}')\
+                        .format(gi,node.gens,node.fix_count,node.rev_count,node.popfit,
+                                round(tgens1/Tgens1*100,3),' '*20),end='\r')
                     
         # Keep track of total generations over branching simulation.
         total_gens = tgens1
         # Reset model to last fixation.
         node.model = model_at_last_fixation
+        with open(copasi_filename,'w',encoding='utf8') as file:
+            file.write(node.model)
+        # Assign generation number to root node.
+        if node.type == 'root':
+            if imp_eq_filename != 'None':
+                node.gens = imp_gens + gi
+            else:
+                node.gens = gi
+            if branch_length_type == 'mya' and node.two_perc_rule_gen_thresh == 0:
+                # Just fill in a number for now.
+                # It is very unlikely that the above condition
+                # is not met.
+                node.two_perc_rule_gen_thresh = 1000
 
-    def find_glr(self):
+    def find_gens_per_branch(self):
         """Determine ratio to convert branch length
           to generations per branch."""
-        cbls = [] # cumulative branch lengths
-        for node in self.branch_list[1:]:
-            cbl = sum([self.branch_dict[n].length for n in [node.num] + node.ancestors if self.branch_dict[n].length != None])
-            node.cum_length = cbl
-            cbls.append(cbl)
-        self.GEN_TO_LENGTH_RATIO = sim_gens / max(cbls)
-        for node in self.branch_list[1:]:
-            node.gens = round(self.GEN_TO_LENGTH_RATIO*node.length)
+        # Autodetection based on 2% rule threshold.
+        if sim_gens == 0:
+            # Branch length measurement type-dependent multiplier.
+            mult = 1
+            if branch_length_type == 'subs per site':
+                # Convert branch lengths to percentages.
+                mult = 100
+            # All nodes but root.
+            for node in self.branch_list[1:]:
+                # Follow 2% rule using detected threshold.
+                node.gens = round(self.branch_dict[0].two_perc_rule_gen_thresh*node.length*mult)
+        # Longest line generations entered manually.
+        else:
+            # Calculate maximum cumulative branch length.
+            max_cum_length = max(
+                [node.cum_length for node in self.branch_list[1:]])
+            # Determine ratio of generations to length.
+            self.GEN_TO_LENGTH_RATIO = sim_gens / max_cum_length
+            # Assign generation numbers accordingly.
+            for node in self.branch_list[1:]:
+                node.gens = round(self.GEN_TO_LENGTH_RATIO*node.length)
 
     def branch(self,node):
         """
@@ -1230,7 +1786,7 @@ class Tree():
             Total_gens = sum([n.gens for n in self.branch_list[1:]])
             total_gens = 0
             prnt_msg('branching root population fit: {}'.format(node.popfit))
-            prnt_msg('total generations to simulate: {}'.format(Total_gens))
+            prnt_msg('total generations to simulate: {}\n'.format(Total_gens))
         for childno in node.children:
             # Pass on attributes to child.
             self.branch_dict[childno].inherit(node)
@@ -1314,6 +1870,8 @@ class Tree():
                     final_row_df = pd.DataFrame(final_row_dict)
                     final_row_df.to_excel(path + info_type.lower() 
                                           + '_final_row.xlsx',index=False)
+                    # Number of generations required for about 2% change.
+                    file.write('No. simulated generations per million years: {}\n\n'.format(node.two_perc_rule_gen_thresh))
                     # Also write string to text file.
                     file.write('last row of dd: ' 
                                + str([node.data[info][-fixind] \
@@ -1321,6 +1879,9 @@ class Tree():
                     with open(path + info_type.lower() 
                               + '_final_cps.cps','w') as ncpsfile:
                         ncpsfile.write(node.model)
+                    # Write Haldane dict.
+                    global Haldane_rxn_dicts
+                    file.write('Haldane dicts: '+str(Haldane_rxn_dicts)+'\n\n')
                 else:
                     file.write('info for ' + info_type.lower() 
                                + ' ' + str(node.num) + '\n\n')
@@ -1399,7 +1960,7 @@ class Tree():
             plt.close()
             # Slopes.
             plt.rcParams["figure.figsize"] = (14,14)
-            plt.plot(node.fit_slopes_cvs['fit_slope'])
+            plt.plot(node.slopes_cvs['slope_fit'])
             plt.legend(selection_flux_labels)
             plt.title('Slope of population fitness over {}-fixation windows'.\
                       format(eq_check),fontsize=24)
@@ -1413,7 +1974,7 @@ class Tree():
             plt.close()
             plt.rcParams["figure.figsize"] = (14,14)
             # CVs.
-            plt.plot(node.fit_slopes_cvs['fit_cv'])
+            plt.plot(node.slopes_cvs['cv_fit'])
             plt.legend(selection_flux_labels)
             plt.title('CVs of population fitness over {}-fixation windows'.\
                       format(eq_check),fontsize=24)
@@ -1426,14 +1987,13 @@ class Tree():
             plt.clf()
             plt.close()
             # Write dataframe of slopes and CVs.
-            slopes_cvs_df = pd.DataFrame(node.fit_slopes_cvs)
-            slopes_cvs_df.to_excel(
-                path+'equilibration_fitness_slopes_cvs.xlsx')
+            node.slopes_cvs.to_excel(
+                path+'equilibration_fitness_fluxes_slopes_cvs.xlsx')
 
     def plot_species_and_fluxes(self,nl,path,itype):
         """
         Plot all species concentrations and 
-        reaction fluxes as png files.
+        reaction fluxes as png files in separate folders.
 
             Parameters:
                 nl (list):
@@ -1443,32 +2003,39 @@ class Tree():
                 itype (str):
                     Type of info (Equilibration, Line, or Branch).
         """
-        # Folder pathway - create if absent.
-        flux_path = path + 'fluxes/'
+        # Folder pathways - create if absent.
+        flux_path = path + 'reaction_fluxes/'
         if flux_path not in str(subprocess.run(['ls','-d',flux_path],
                                                capture_output=True).stdout):
             subprocess.run(['mkdir',flux_path])
+        spec_path = path + 'species_initial_concs/'
+        if spec_path not in str(subprocess.run(['ls','-d',spec_path],
+                                               capture_output=True).stdout):
+            subprocess.run(['mkdir',spec_path])
         # Plot.
-        for fxp in spec_concs_labels+rxn_names:
-            plt.rcParams["figure.figsize"] = (14,14)
-            for node in nl:
-                plt.plot(node.data[fxp])
-            plt.xlabel('fixations',fontsize=10)
-            plt.ylabel(fxp,fontsize=10)
-            if itype == 'Equilibration':
-                plt.title('{} over Equilibration'.format(fxp),fontsize=14)
-                plt.savefig(flux_path+'{}_equilibration.png'.format(fxp),
-                            bbox_inches='tight')
-            else:
-                plt.title('{} {}'.format(itype,fxp),fontsize=14)
-                plt.legend([node.num for node in nl],bbox_to_anchor=(1,1),
-                           ncol=len(nl)//50+1)
-                plt.savefig(flux_path+'{}_{}.png'.format(itype.lower(),fxp),
-                            bbox_inches='tight')
-            plt.rcParams["figure.figsize"] = \
-                plt.rcParamsDefault["figure.figsize"]
-            plt.clf()
-            plt.close()
+        for folder_path, param_list in zip([flux_path,spec_path],
+                                           [rxn_names,spec_concs_labels]):
+            for param in param_list:
+                plt.rcParams["figure.figsize"] = (14,14)
+                for node in nl:
+                    plt.plot(node.data[param])
+                plt.xlabel('fixations',fontsize=10)
+                plt.ylabel(param,fontsize=10)
+                if itype == 'Equilibration':
+                    plt.title('{} over Equilibration'.format(param),
+                              fontsize=14)
+                    plt.savefig(folder_path+'{}_equilibration.png'.format(param),
+                                bbox_inches='tight')
+                else:
+                    plt.title('{} {}'.format(itype,param),fontsize=14)
+                    plt.legend([node.num for node in nl],bbox_to_anchor=(1,1),
+                            ncol=len(nl)//50+1)
+                    plt.savefig(folder_path+'{}_{}.png'.format(itype.lower(),param),
+                                bbox_inches='tight')
+                plt.rcParams["figure.figsize"] = \
+                    plt.rcParamsDefault["figure.figsize"]
+                plt.clf()
+                plt.close()
 
     def plot_per_node(self,nl,path,itype):
         """
@@ -1593,7 +2160,8 @@ class Tree():
         # Columns.
         cols = ['fixed','generation','fitness','selection coef','PoF',
                 'mutants','errors'] + selection_flux_labels + \
-                    spec_concs_labels + rxn_names + mut_pars
+                    spec_concs_labels + rxn_names + all_pars
+                    # spec_concs_labels + rxn_names + mut_pars
         # Select values.
         mostvals = ['fit'] + selection_flux_labels + spec_concs_labels + \
             rxn_names + mut_pars
@@ -1684,7 +2252,7 @@ class Tree():
                 if mx != mn:
                     CP += 1
             except:
-                ...
+                pass
             else:
                 for r in range(PDdf.shape[0]):
                     try:
@@ -1707,11 +2275,11 @@ class Tree():
         PDdf.to_excel(path+itype.lower()+'_heatmap_values.xlsx')
         # Indicate level of systematic movement.
         try:
-            prnt_msg(('There are {} diverging parameters among {}' + \
+            prnt_msg(('There are {} diverging parameters among {} ' + \
                      'total changing parameters with {} binding constants')\
                         .format(DP,CP,len(binding_constants)))
         except:
-            ...
+            pass
         # Matching labels.
         mostvals2 = [l for l in mostvals if mostvals.index(l) not in remcols]
         pdarray = np.asarray(PDdf)
@@ -1722,8 +2290,14 @@ class Tree():
             fig, ax = plt.subplots(figsize=(36,22))
             sns.heatmap(hmd,yticklabels=[n.num for n in nl],
                         xticklabels=mostvals2,linewidth=0.5,cmap=col_sch,ax=ax)
-            plt.title(('Normalized percent change in simulation {}' + \
-                      'values from start to end').format(nsim),fontsize=36)
+            # Title includes simulation number if nsim > 1.
+            if nsim > 1:
+                hm_title = ('Normalized percent change in simulation {} ' + \
+                        'values from start to end').format(nsim)
+            else:
+                hm_title = ('Normalized percent change in simulation ' + \
+                        'values from start to end')
+            plt.title(hm_title,fontsize=36)
             plt.ylabel(itype,fontsize=26)
             plt.xlabel('Value',fontsize=26)
             plt.savefig(path + 'percent_diff_heatmap_{}.png'.format(col_sch),
@@ -1757,23 +2331,26 @@ class Tree():
         self.write_final_info([root_node],fesd,itype)
         # If equilibration was imported or not started, 
         # there's no generational data.
-        self.record_datatables([root_node],fesd,itype,gen=gen)
-        # Probabilities of fixaton histogram.
-        plt.rcParams["figure.figsize"] = (12,12)
-        plt.hist(root_node.data['pfix'][1:],bins=[x/10 for x in range(10)])
-        plt.title('all probabilities of fixation')
-        plt.xlabel('value')
-        plt.ylabel('frequency')
-        plt.savefig(fesd+'equilibration_pfixes.png',bbox_inches='tight')
-        plt.rcParams["figure.figsize"] = plt.rcParamsDefault["figure.figsize"]
-        plt.clf()
-        plt.close()
-        # Remove unfixed mutations for these functions.
-        root_node.filter_data_dict()
-        self.plot_fitness([root_node],fesd,itype)
-        self.plot_species_and_fluxes([root_node],fesd,itype)
-        self.graphpars([root_node],fesd,itype)
-        prnt_msg('All equilibration data recorded')
+        if len(root_node.data['fit']) > 2:
+            self.record_datatables([root_node],fesd,itype,gen=gen)
+            # Probabilities of fixaton histogram.
+            plt.rcParams["figure.figsize"] = (12,12)
+            plt.hist(root_node.data['pfix'][1:],bins=[x/10 for x in range(10)])
+            plt.title('all probabilities of fixation')
+            plt.xlabel('value')
+            plt.ylabel('frequency')
+            plt.savefig(fesd+'equilibration_pfixes.png',bbox_inches='tight')
+            plt.rcParams["figure.figsize"] = plt.rcParamsDefault["figure.figsize"]
+            plt.clf()
+            plt.close()
+            # Remove unfixed mutations for these functions.
+            root_node.filter_data_dict()
+            self.plot_fitness([root_node],fesd,itype)
+            self.plot_species_and_fluxes([root_node],fesd,itype)
+            self.graphpars([root_node],fesd,itype)
+            prnt_msg('All equilibration data recorded')
+        else:
+            prnt_msg('Final root node info recorded.')
 
     def record_node_data(self,nl,sim_path,itype,nsim,gen):
         """
@@ -1813,7 +2390,10 @@ class Tree():
         if itype == 'Branch':
             allpfxs = []
             for node in nl + [self.branch_dict[0]]:
-                allpfxs.extend(node.data['pfix'])
+                try:
+                    allpfxs.extend(node.data['pfix'])
+                except:
+                    pass
             while None in allpfxs:
                 allpfxs.remove(None)
             plt.rcParams["figure.figsize"] = (12,12)
@@ -1843,6 +2423,91 @@ class Tree():
         self.plot_species_and_fluxes(subnl,fssd,itype)
         self.graphpars(subnl,fssd,itype)
         prnt_msg('{} data recorded'.format(itype))
+
+    def import_equilibrated_root(self):
+        """Reload equilibration node info from old simulation."""
+        global flux_prop_dict, imp_gens
+        # Read in final info txt file.
+        eqtxtfile = os.getcwd() + '/' + imp_eq_filename + '/equilibration_data/equilibration_final_info.txt'
+        with open(eqtxtfile) as file:
+            alltext = file.read()
+        # Generations, fixations, mutations, resets, and fitness.
+        self.branch_dict[0].gens = imp_gens = int(re.search(
+            r'(?<=no. generations: )\d+(?=\n)',alltext).group(0))
+        self.branch_dict[0].imp_fix_count = self.branch_dict[0].fix_count = int(
+            re.search(r'(?<=no. fixations: )\d+(?=\n)',alltext).group(0))
+        self.branch_dict[0].mut_count = int(
+            re.search(r'(?<=no. mutations: )\d+(?=\n)',alltext).group(0))
+        self.branch_dict[0].rev_count = int(
+            re.search(r'(?<=no. reversals: )\d+(?=\n)',alltext).group(0))
+        self.branch_dict[0].popfit = float(
+            re.search(r'(?<=final fitness: )\d+\.\d+(?=\n)',alltext).group(0))
+        # Flux proportion dict.
+        flux_prop_dict = {
+            k:v for k,v in zip(selection_flux_names,[float(m.group(0)) 
+                    for m in re.finditer(r'\d+\.\d+',
+                    re.search(r'flux scaler dict:.+\n',alltext).group(0))])
+                    }
+        # No. generations resulting in about 2% divergence across lines.
+        self.branch_dict[0].two_perc_rule_gen_thresh = int(re.search(r'(?<=generations per million years: )\d+(?=\n)',alltext).group(0))
+        # Fill first row data dict from dataframe.
+        eqddfr = os.getcwd() + '/' + imp_eq_filename \
+            + '/equilibration_data/equilibration_final_row.xlsx'
+        self.branch_dict[0].data = pd.read_excel(eqddfr).to_dict(orient='list')
+
+def experiment():
+    """Run experiment simulating metabolic pathway evolution."""
+
+    global flux_prop_multiplier, mut_change, eq_check, window_check
+    global logfile, write_log_file, exp_path
+    global branch_dfs, line_dfs, copasi_dir_str
+
+    global prnt_msg,make_runtime_string,calc_cv,analyze_sims
+    global extract_parname
+
+    def prnt_msg(S):
+        """
+        Print string to screen and logfile.
+
+            Parameter:
+                S (str): Message to print and append to file.
+        """
+        print(S)
+        if write_log_file:
+            with open (logfile,'a') as lf:
+                lf.write(S+'\n')
+
+    def make_runtime_string(start_time,stop_time):
+        """
+        Make runtime component for foldernames.
+
+            Parameters:
+                start_time (datetime.time): starting time
+                stop_time (datetime.time): end time
+            Returns:
+                runtime_string (str): edited time difference info
+        """
+        diff = stop_time - start_time
+        runtime = diff.total_seconds()
+        if runtime / 60 > 1:
+            runtime /= 60
+            if runtime / 60 > 1:
+                runtime /= 60
+                runtime_string = str(round(runtime,1)) + 'hr'
+            else:
+                runtime_string = str(round(runtime,1)) + 'min'
+        else:
+            runtime_string = str(round(runtime,1)) + 'sec'
+        return runtime_string
+
+    def calc_cv(x):
+        """Return coefficient of variation of series/list x."""
+        mu = np.mean(x)
+        # avoid divide by 0
+        if mu == 0:
+            return 0
+        else:
+            return np.std(x) / mu
 
     def analyze_sims(exp_path):
         """
@@ -1899,52 +2564,19 @@ class Tree():
                 plt.close()
         prnt_msg('\n{} simulations analyzed'.format(num_sims))
 
-    def import_equilibrated_root(self):
-        """Reload equilibration node info from old simulation."""
-        global flux_prop_dict
-        # Read in final info txt file.
-        eqtxtfile = os.getcwd() + '/' + imp_eq_filename + '/equilibration_data/equilibration_final_info.txt'
-        with open(eqtxtfile) as file:
-            alltext = file.read()
-        # Generations, fixations, mutations, resets, and fitness.
-        self.branch_dict[0].gens = int(re.search(
-            r'(?<=no. generations: )\d+(?=\n)',alltext).group(0))
-        self.branch_dict[0].imp_fix_count = self.branch_dict[0].fix_count = int(
-            re.search(r'(?<=no. fixations: )\d+(?=\n)',alltext).group(0))
-        self.branch_dict[0].mut_count = int(
-            re.search(r'(?<=no. mutations: )\d+(?=\n)',alltext).group(0))
-        self.branch_dict[0].rev_count = int(
-            re.search(r'(?<=no. reversals: )\d+(?=\n)',alltext).group(0))
-        self.branch_dict[0].popfit = float(
-            re.search(r'(?<=final fitness: )\d+\.\d+(?=\n)',alltext).group(0))
-        # Flux proportion dict.
-        flux_prop_dict = {
-            k:v for k,v in zip(selection_flux_names,[float(m.group(0)) 
-                    for m in re.finditer(r'\d+\.\d+',
-                    re.search(r'flux scaler dict:.+\n',alltext).group(0))])
-                    }
-        # Fill first row data dict from dataframe.
-        eqddfr = os.getcwd() + '/' + imp_eq_filename \
-            + '/equilibration_data/equilibration_final_row.xlsx'
-        self.branch_dict[0].data = pd.read_excel(eqddfr).to_dict(orient='list')
-
-def experiment():
-    """Run experiment simulating metabolic pathway evolution."""
-
-    global flux_prop_multiplier, mut_change, eq_check, window_check
-    global logfile, write_log_file
-    global branch_dfs, line_dfs
+    def extract_parname(rxn_parname):
+        """pull parameter name from Reaction_#_..."""
+        i = re.search(r'Reaction\_\d+\_',rxn_parname).span(0)[1]
+        return rxn_parname[i:]
 
     # Errors
     warnings.filterwarnings(action='error',
                             message='.*invalid value encountered.*',)
     warnings.filterwarnings(action='error',message='.*overflow encountered.*',)
-
+    
     # Lists for dataframes for branches and lines 
     # of percent differences for analysis.
     branch_dfs,line_dfs = [],[]
-    # Print info.
-    pinfo = False
     # Multiplier for denominator.
     flux_prop_multiplier = 2
     # Mutational effect as percentage.
@@ -1968,44 +2600,57 @@ def experiment():
         .replace('-','')[2:-10]
 
     # Pathway to experiment folder.
-    exp_path = '/exp_{}_{}/'.format(exp_note,exp_datetime_str)
+    exp_path = '/PEMPS_{}_{}/'.format(exp_note,exp_datetime_str)
     if exp_path not in str(subprocess.run(['ls','-d',exp_path],
                                         capture_output=True).stdout):
         subprocess.run(['mkdir',os.getcwd()+exp_path])
-    # Write a copy of the current program as text file.
-    with open(os.getcwd() + exp_path 
-              + '/program_{}.py'.format(exp_datetime_str),'w') as outfile:
-        with open(os.path.basename(__file__),'r') as tempfile:
-            outfile.write(tempfile.read())
 
     # Log file.
     write_log_file = True
     if write_log_file:
         logfile = os.getcwd() + exp_path + 'experiment__log.txt'.format(exp_note)
         with open(logfile,'a') as lf:
-            lf.write(exp_note + 'logfile\n\n')
+            lf.write(exp_note + '_logfile\n\n')
             lf.write('commands:\n')
             lf.write(ctext)
 
     # Experiment info.
-    prnt_msg('Beginning experiment at ' + exp_datetime[:-7])
+    prnt_msg('Beginning experiment ' + exp_note + ' at ' + exp_datetime[:-7])
     prnt_msg('metabolic model from ' + copasi_filename)
     prnt_msg('phylogenetic tree from ' + newick_filename)
-    prnt_msg('Conducting {} simulations with total g={}'\
-             .format(num_sims,sim_gens))
 
-    # Find branches and generation to branch length ratio.
+    # Find branches in phylogeny.
     exptree.find_branches(exp_path)
-    exptree.find_glr()
 
-    # Make simulation tree template.
-    sim_tree_tmp = dc(exptree)
-
-    # Starting population.
+    # Create and equilibrate starting population.
     exptree.simulate(exptree.branch_dict[0])
     exptree.record_equilibration_data(exptree.branch_dict[0],exp_path,gen=True)
 
+    # Relieve working memory of large data dictionary by reducing
+    # it to information from final fixation.
+    if len(exptree.branch_dict[0].data['fit']) > 0:
+            # Find fixation index (last mutation that fixed)
+            # by reversing 'fix' column and indexing the first True.
+            # Add 1 because negative indexing starts at 1.
+            fixind = exptree.branch_dict[0].data['fix'][::-1].index(True) + 1
+    else:
+        # If there are no parental fixations, 
+        # just index the last row.
+        fixind = 1
+    # Update data dict, reseting the generation count to 0.    
+    exptree.branch_dict[0].data = {
+        info:([exptree.branch_dict[0].data[info][-fixind]] if \
+            info != 'gens' else [0]) for info in data_labels}
+    # Jettison other info as well.
+    exptree.branch_dict[0].fixed_eq_check_vals = None
+    exptree.branch_dict[0].slopes_cvs = None
+    # Make simulation tree template.
+    sim_tree_tmp = dc(exptree)
+    # Calculate number of simulated generations along each branch.
+    sim_tree_tmp.find_gens_per_branch()
+    
     # Begin simulating over tree.
+    prnt_msg('\nRunning {} simulations'.format(num_sims))
     for nsim in range(1,num_sims+1):
         sim_start_time = datetime.now()
         sim_datetime = str(sim_start_time)
