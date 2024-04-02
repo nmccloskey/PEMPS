@@ -1,0 +1,259 @@
+
+------------
+instructions
+------------
+
+Required packages:
+    os
+    re
+    math
+    random
+    dendropy
+    warnings
+    subprocess
+    numpy
+    pandas
+    seaborn
+    datetime
+    copy - deepcopy
+    matplotlib - pyplot
+
+Required programs:
+    1. COPASI GUI*
+    2. COPASI SE
+    *The GUI version is required only for modifying the 
+    COPASI file so it is not necessary to include in the same directory
+    or even install on the computer where PEMPS is run.
+
+Required files:
+    1. COPASI (.cps) file containing metabolic 
+    model that reaches steady-state.
+    2. Newick or text (.nwk or .txt) file containing
+    rooted phylogeny as Newick string.
+    3. commands.txt file (described below)
+
+All files and programs (except for COPASI GUI) must be 
+saved in the same directory; 
+this directory is also the destination for the output folder.
+
+In COPASI GUI, the COPASI (.cps) file must be modified:
+    1. In the Steady-State Task, the "update model" and "executable"
+    options must be checked.
+    2. In the window opened by clicking on "Report" (bottom right),
+    the options "Append" and "Confirm Overwrite" must be unchecked.
+    Also, a text (.txt) file must be specified after "Filename".
+    3. Save the .cps file.
+These modifications ensure that the program updates initial parameters
+based on mutations, that the SE version of COPASI can execute the 
+Steady-State task via the command line, that the output file is
+continually overwritten as opposed to being appended with new output
+after each calculation of Steady-State, and that this output file
+can be recognized by PEMPS. The user should click "Run" and then check
+the Result section to verify that the selected model reaches steady 
+state. If it doesn't, another model must be selected.
+
+Note: if importing equilibrated root population, the output folder
+must be in the same directory.
+
+-------------
+commands file
+-------------
+Whenever listing, use no spaces to separate list elements.
+Leave no answer blank.
+
+1. Enter file name of .nwk or .txt file containing Newick string.
+    ex) canidaetree.nwk
+
+2. Specify population size(s) as integers.
+   If one number is entered, this will be the size of the population 
+   of all branches. Otherwise, a number for each 
+   branch in order must be entered. The order is the one in which
+   nodes appear in the preliminary_branch_info file. To generate just 
+   this file without any simulation, run the program with inputs of 
+   0 and n to commands 8. and 12 respectively. Prepare an appropriate 
+   list, and rerun the program.
+    ex) 10000
+    ex) 500,700,800,200
+
+3. Enter population ploidy for phylogeny as an integer.
+    ex) 1
+
+4. Enter file name of COPASI (.cps) file containing metabolic model. 
+Note: this file will be modified by the program, so to start another
+ simulation, the user should reimport the model from BioModels and 
+ resave as a .cps file. Saving a template file with the correct settings 
+ adjustments is recommended.
+    ex) Kerkhoven.cps
+
+5. Enter names of reactions representing fluxes on which selective 
+pressure operates.
+    ex) pyruvate kinase [CDC19]
+
+6. Enter weights (summing to 1) for each reaction flux specified above.
+These values will determine how determinative each flux is to 
+population fitness.
+    ex) 1
+    ex) 0.4,0.6
+
+7. Enter parameters to be excluded from mutation.
+    ex) Glco
+
+8. Enter number of simulations to run as integer.
+
+9. Enter integer of generations to equilibrate root population. If 0,
+the program will automatically detect equilibration by finding when 
+fitness and 80% of initial conditions and reaction fluxes reach certain
+indicators of flatness when plotted over fixations.
+If the user wishes to override the automatic equilibrium detector, 
+or extend the equilibration for a previously simulated population,
+any other integer can be entered.
+    ex) 100000
+
+10. Enter integer of generations to simulate along the longest line in
+the phylogeny, with other generations numbers determined proportionally
+for branches by their length. If 0, the program will automatically 
+convert branch lengths from millions of years or substitutions per
+site to generations (see methods in accompanying paper).
+    ex) 250000
+
+11. Enter foldername containing previously equilibrated model. The same 
+equilibrated population can be further equilibrated and/or used as the 
+starting point for any other phylogeny. Enter None to start
+equilibrating from file in 4.
+    ex) exp_updates_TEST_Kerkhoven_230523_18.01
+
+12. Enter Y to equilibrate or n to go right to branching simulation.
+
+13. Enter a note for the foldername containing program output.
+    ex) updates TEST Kerkhoven
+
+14. Enter the Steady-State output file name designated during the
+modification of the COPASI file in COPASI GUI.
+    ex) ssoutK.txt
+
+15. Enter parameter names to be excluded from being categorized as
+binding constants. The program searches for parameters containing a 'K'
+in certain contexts among the kinetic parameters to 
+identify binding constants.
+    ex) kc
+
+16. Enter any parameters to be included in the binding constant list
+that may be missed by the automatic search.
+    ex) parameter_3,parameter_97
+
+17. Enter the type of branch length measurement used in the phylogeny as 
+"subs per site" or "mya" (millions of years) or NA, in the
+event that command 10 is not 0.
+    ex) subs per site
+
+18. Enter Y to implement Haldane's constraint or n to go without it.
+
+19. Enter directory to COPASI SE.
+    example windows: /mnt/c/Users/username/bio/copasi/bin/CopasiSE
+    example mac: /Users/username/Downloads/PEMPS/CopasiSE
+
+------
+Output
+------
+output_folder: PEMPS_{experimental note}_{datetime}
+    folders:
+        equilibration_data
+        simulation_{simulation no.}_{datetime}
+    ascii_tree.txt
+        text file of ascii phylogenetic tree from dendropy
+    experimental_log.txt
+        contains commands entered, parameters detected, branching info
+    prelim_branch_info.xlsx
+        pre-simulation node info (Newick substrings, sisters, etc.)
+
+output_folder/equilibration_data
+    folders (all containing line graphs over fixations as .png files):
+        parameters
+            each mutatable model parameter
+            name: {branch}_{parameter name}.png
+                here branch is "root"
+                if a parameter is a specific reaction parameter,
+                root_Reaction_{reaction no.}_{parameter name}.png
+        reaction_fluxes
+            fluxes for each model reaction
+            name: {reaction name}_equilibration.png
+        species_initial_concs
+            initial concentrations for each model species
+            name: conc_{species name}_equilibration.png
+    data tables:
+        equilibration_data.xlsx
+            detailed info for each mutation
+        equilibration_final_row.xlsx
+            the info from the final mutation
+        equilibration_fitness_fluxes_slopes_cvs.xlsx
+            contains line flatness measurements 
+            for auto-detecting equilibration
+    pictures:
+        all_fits.png
+            line graph of each model fitness over fixations
+        equilibration_fit.png
+            line graph of fitness over fixations
+        equilibration fit {flux under selection}.png
+            for each flux under selection,
+            a line graph of fitness over fixations
+        equilibration_fitness_slopes.png
+            slopes of model fitness over fixation check windows
+        equilibration_fitness_cvs.png
+            coefficents of variation of model fitness 
+            over fixation check windows
+        equilibration_pfixes.png
+            histogram of probabilities of fixation for equilibration
+    copasi file:
+        equilibration_final_cps.cps
+            the model, as a copasi file, of the last fixation
+            used in user-extended equilibration
+            or in simulating another tree from equilibrated root
+
+output_folder/simulation_folder
+    folders:
+        branch_data
+            folders:
+                cps_files
+                    models at final fixation for each branch
+                generational_branch_data
+                    .xlsx files like equilibration_data.xlsx
+                    but with mutation info for each branch
+                parameters
+                    like equilibration_data/parameters
+                    but over all mutations (including unfixed)
+                reaction_fluces
+                    like equilibration_data/reaction_fluxes
+                    but over all mutations (including unfixed)
+                species_initial_concs
+                    like equilibration_data/species_initial_concs
+                    but over all mutations (including unfixed)
+            data tables:
+                branch_info.xlsx
+                    additions to prelim_branch_info.xlsx with
+                    simulation info
+                final_branch_data.xlsx
+                    parameters at the end of each branch simulation
+                branch_percent_diffs.xlsx
+                    % difference from ending values of equilibrated
+                    root to end of branch
+                branch_normalized_percent_diffs.xlsx
+                    values from previous file but normalized so that
+                    positive values fall into [0,1]
+                    and negative from [-1,0]
+                branch_heatmap_values.xlsx
+                    the values depicted in the heatmaps
+                    (some parameters eliminated if they show no change)
+            pictures:
+                a few bar graphs for comparing branch attributes
+                    fitness, generations, fixations, (cumulative) length
+                two heatmaps showing normalized percent differences
+                    percent_diff_heatmap_gnuplot2.png
+                    percent_diff_heatmap_PiYG.png
+        line_data
+            same as branch data but only fixation data is included
+            in parameters, reaction fluxes, and initial concentration
+            (no unfxied mutations graphed in these folders)
+    picture:
+        allpfixes.png
+            histogram of probabilities of fixation for all branches
+            during simulation
