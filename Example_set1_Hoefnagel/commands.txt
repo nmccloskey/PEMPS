@@ -1,0 +1,39 @@
+1. rooted newick string file name: gammaproteobacteria_order_pruned.txt
+
+2. population size(s): 10000000
+
+3. ploidy: 2
+
+4. copasi file name: Hoefnagel.cps
+
+5. fitness-determining fluxes: R2,R5,R7,R10
+
+6. weights for fitness calculation: 0
+
+7. no-mutation parameters: C,cell,volume,avogadr,avogadro,extracellular,glycerate,phosphates,Glco,GLCx,GLUe,Glc_e,cytosol,glycosome,default,chloroplast,Light_on,vacuole,phloem,r,D,phi,v(15),compartment,uVol
+
+8. number of simulations: 1
+
+9. generations to equilibrate: 0
+
+10. generations to branch: 0
+
+11. experiment foldername containing old equilibration to import (can enter None): None
+
+12. equilibrate (Y/n): Y
+
+13. experiment note: Hoefnagel
+
+14. outfile name: ssoutH.txt
+
+15. exclude from bcl: None
+
+16. include in bcl (Can enter None): None
+
+17. branch lengths measured in (enter subs per site or mya or NA): mya
+
+18. Haldane (Y/n): Y
+
+19. COPASI SE directory: CopasiSE.exe
+
+20. BasiCO method (Y/n): n
