@@ -8,6 +8,7 @@ Required packages:
     re
     math
     random
+    basico
     dendropy
     warnings
     subprocess
@@ -21,6 +22,7 @@ Required packages:
 Required programs:
     1. COPASI GUI*
     2. COPASI SE
+    both verion 4.42
     *The GUI version is required only for modifying the 
     COPASI file so it is not necessary to include in the same directory
     or even install on the computer where PEMPS is run.
@@ -36,7 +38,8 @@ All files and programs (except for COPASI GUI) must be
 saved in the same directory; 
 this directory is also the destination for the output folder.
 
-In COPASI GUI, the COPASI (.cps) file must be modified:
+In COPASI GUI, the COPASI (.cps) file must be modified.
+Steps 2 and 3 do not apply if BasiCO method is used.
     1. In the Steady-State Task, the "update model" and "executable"
     options must be checked.
     2. In the window opened by clicking on "Report" (bottom right),
@@ -151,6 +154,12 @@ event that command 10 is not 0.
 19. Enter directory to COPASI SE.
     example windows: /mnt/c/Users/username/bio/copasi/bin/CopasiSE
     example mac: /Users/username/Downloads/PEMPS/CopasiSE
+    if in same directory: CopasiSE.exe
+
+20. Indicate use of BasiCO by entering Y or n. It is recommended to enter Y,
+except for those models whose parameters are not accessible with this module.
+In such cases, PEMPS will try BasiCO and notify the user if instead the alternate
+strategy (regex update method and subprocess steady state commands) must be used.
 
 ------
 Output
