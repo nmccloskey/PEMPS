@@ -37,3 +37,5 @@
 19. COPASI SE directory: /mnt/c/Users/mcclo/OneDrive - Temple University/BinfoPSM/Capstone/cop/bin/CopasiSE
 
 20. BasiCO method (Y/n): n
+
+21. flux proportionalization multiplier: 1
