@@ -1,27 +1,41 @@
-1. rooted newick string file name: Cephalopoda_family.nwk
+1. rooted newick string file name: Ascomycota_order.nwk
 
 2. population size(s): 1000
 
-3. ploidy: 1
+3. ploidy: 4
 
-4. copasi file name: testM.cps
+4. copasi file name: Teusink.cps
 
-5. fitness-determining fluxes: GND,ZWF,E4P sink,R5P sink
+5. fitness-determining fluxes: Pyruvate kinase
 
-6. weights for fitness calculation: 0.2,0.2,0.3,0.3
+6. weights for fitness calculation: 0
 
-7. no-mutation parameters: C,cell,volume,avogadr,avogadro,extracellular,glycerate,phosphates,Glco,GLCx,GLUe,Glc_e,cytosol,glycosome,default,chloroplast,Light_on,vacuole,phloem,r,D,phi,v(15)
+7. no-mutation parameters: C,cell,volume,avogadr,avogadro,extracellular,glycerate,phosphates,Glco,GLCx,GLUe,Glc_e,cytosol,glycosome,default,chloroplast,Light_on,vacuole,phloem,r,D,phi,v(15),compartment,uVol
 
 8. number of simulations: 1
 
-9. generations to equilibrate: 500000
+9. generations to equilibrate: 0
 
-10. generations to branch: 50000
+10. generations to branch: 0
 
-11. experiment foldername containing old equilibration to import (can enter None): exp_M_500e_50b_230226_13.56
+11. experiment foldername containing old equilibration to import (can enter None): None
 
 12. equilibrate (Y/n): Y
 
-13. experiment note: M ext 1000e 50b
+13. experiment note: Teusink 1% branch asc order
 
-14. outfile name: ssoutM.txt
+14. outfile name: ssoutT.txt
+
+15. exclude from bcl: None
+
+16. include in bcl (Can enter None): None
+
+17. branch lengths measured in (enter subs per site or mya or NA): mya
+
+18. Haldane (Y/n): Y
+
+19. COPASI SE directory: CopasiSE.exe
+
+20. BasiCO method (Y/n): Y
+
+21. flux proportionalization multiplier: 1
