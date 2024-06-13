@@ -511,6 +511,8 @@ class Tree():
         basico_selection = re.search(r'(?<=BasiCO method \(Y/n\): )\w',
                                      ctext).group(0)
         self.use_basico_method = False if basico_selection == 'n' else True
+        # Proportionalization factor.
+        self.flux_prop_multiplier = float(re.search(r'(?<=proportionalization multiplier: )\d*\.?\d+',ctext).group(0))
  
     def initial_model_parse(self,node):
         """
@@ -2849,7 +2851,7 @@ def experiment():
 
     # Experiment info.
     exptree.prnt_msg('\n\nBeginning experiment ' + exptree.exp_note + ' at ' + exp_datetime[:-7])
-    exptree.prnt_msg('metabolic model from ' + copasi_filename)
+    exptree.prnt_msg('metabolic model from ' + exptree.copasi_filename)
     exptree.prnt_msg('phylogenetic tree from ' + exptree.newick_filename)
 
     # Find branches in phylogeny.
