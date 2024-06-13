@@ -37,3 +37,5 @@
 19. COPASI SE directory: CopasiSE.exe
 
 20. BasiCO method (Y/n): n
+
+21. flux proportionalization multiplier: 1
