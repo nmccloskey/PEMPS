@@ -10,7 +10,7 @@ sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PE
 sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 
 def test_analyze_sims():
-    from PEMPS_ import Tree
+    from PEMPS import Tree
 
     # Mocking the Tree object with necessary attributes
     tree = Tree()
