@@ -35,7 +35,7 @@ def mock_commands_file():
 
 def test_parse_user_commands(mock_commands_file):
     with patch("builtins.open", mock_open(read_data=mock_commands_file)):
-        from PEMPS_ import Tree  # Import here to avoid potential circular import issues
+        from PEMPS import Tree  # Import here to avoid potential circular import issues
 
         # Creating a Tree object and calling the parse_user_commands method
         tree = Tree()
