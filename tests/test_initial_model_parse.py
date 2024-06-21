@@ -7,7 +7,7 @@ import pytest
 # @patch("builtins.open", new_callable=mock_open, read_data="mock_copasi_file")
 def test_initial_model_parse():
 
-    from PEMPS_ import Node,Tree
+    from PEMPS import Node,Tree
 
     tree = Tree()
     tree.copasi_filename = 'Teusink.cps'
