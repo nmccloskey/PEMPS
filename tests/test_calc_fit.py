@@ -6,7 +6,7 @@ sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS
 import pytest
 
 def test_calc_fit():
-    from PEMPS_ import Node, Tree
+    from PEMPS import Node, Tree
     tree = Tree()
     tree.selection_flux_names = ['flux1', 'flux2', 'flux3']
     tree.fit_weights = [0.1, 0.3, 0.6]
