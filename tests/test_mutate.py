@@ -8,7 +8,7 @@ sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PE
 sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 
 def test_mutate():
-    from PEMPS_ import Node, Tree
+    from PEMPS import Node, Tree
 
     # Mocking the Tree object with necessary attributes
     class MockTree:
