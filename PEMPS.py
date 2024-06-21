@@ -841,7 +841,7 @@ class Tree():
         self.mut_pars = [mp for mp in self.all_pars if mp not in self.no_mut_list]
 
         # Data column labels
-        data_labels = first_columns+self.selection_flux_labels\
+        self.data_labels = first_columns+self.selection_flux_labels\
             +self.spec_concs_labels+self.rxn_names+self.all_pars
             # +spec_concs_labels+rxn_names+mut_pars
 
@@ -852,7 +852,7 @@ class Tree():
                 +list(self.kin_par_dict.values())
 
         # Data dictionary.
-        data = {k:[v] for k,v in zip(data_labels,data_vals)}
+        data = {k:[v] for k,v in zip(self.data_labels,data_vals)}
         # Assign attributes to node.
         node.data = dc(data)
         node.selection_flux_dict = dc(self.selection_flux_dict)
@@ -877,7 +877,7 @@ class Tree():
         self.prnt_msg('\nHaldane reaction dicts: ' + str(self.Haldane_rxn_dicts) + '\n')
         self.prnt_msg('\nSelection fluxes: {}'.format(self.selection_flux_dict) + '\n')
 
-    def find_branches(self,exp_path):
+    def find_branches(self):
         """
         Parse phylogeny (newick string) to construct tree object.
         
@@ -888,7 +888,7 @@ class Tree():
         # Make dendropy tree.
         dtree = dendropy.Tree.get(path=self.newick_filename,schema='newick')
         # Write ascii tree to text file.
-        with open(os.getcwd() + exp_path+'ascii_tree.txt','w') as f:
+        with open(os.getcwd() + self.exp_path+'ascii_tree.txt','w') as f:
             f.write(dtree.as_ascii_plot())
         # Parse newick string.
         with open(self.newick_filename) as file:
@@ -1034,12 +1034,12 @@ class Tree():
                    for at in branch_attributes}
         binfodf = pd.DataFrame(dfdict)
         binfodf.index.name = 'no.'
-        binfodf.to_excel(os.getcwd() + exp_path + 'prelim_branch_info.xlsx')
+        binfodf.to_excel(os.getcwd() + self.exp_path + 'prelim_branch_info.xlsx')
         # Collect population size info from excel sheet.
         if self.popsizes == [0]:
             try:
                 input('Enter correct population sizes in prelim_branch_info.xlsx. Press Return when file is updated and closed.')
-                tempdf = pd.read_excel(os.getcwd() + exp_path + 'prelim_branch_info.xlsx')
+                tempdf = pd.read_excel(os.getcwd() + self.exp_path + 'prelim_branch_info.xlsx')
                 for branch,popsize in zip(self.bl,tempdf['popsize']):
                     branch.popsize = popsize
             except:
@@ -1052,7 +1052,7 @@ class Tree():
                    for at in branch_attributes}
             binfodf = pd.DataFrame(dfdict)
             binfodf.index.name = 'no.'
-            binfodf.to_excel(os.getcwd() + exp_path + 'prelim_branch_info.xlsx')
+            binfodf.to_excel(os.getcwd() + self.exp_path + 'prelim_branch_info.xlsx')
 
     def populate(self):
         """Set up initial population."""
@@ -1577,7 +1577,7 @@ class Tree():
                     file.write(info_type + ' info\n\n')
                     file.write('newick string: ' + node.name + '\n\n')
                     file.write('flux scaler dict: ' 
-                               + str(flux_prop_dict) + '\n\n')
+                               + str(self.flux_prop_dict) + '\n\n')
                     if node.fix_count > 0:
                         # Add 1 because negative indexing starts at 1.
                         fixind = node.data['fix'][::-1].index(True) + 1
@@ -2047,7 +2047,7 @@ class Tree():
             fig.clear()
             plt.close()
 
-    def record_equilibration_data(self,root_node,exp_path,gen=False):
+    def record_equilibration_data(self,root_node,gen=False):
         """
         Run all functions required to write equilibration data.
 
@@ -2063,7 +2063,7 @@ class Tree():
         self.prnt_msg('\nWriting equilibration data')
         # Full equilibration subdirectory.
         itype = 'Equilibration'
-        eqfold = exp_path + 'equilibration_data/'
+        eqfold = self.exp_path + 'equilibration_data/'
         fesd = os.getcwd() + eqfold
         if eqfold not in str(subprocess.run(['ls','-d',eqfold],
                                             capture_output=True).stdout):
@@ -2092,7 +2092,7 @@ class Tree():
         else:
             self.prnt_msg('Final root node info recorded.')
 
-    def record_node_data(self,nl,sim_path,itype,nsim,gen):
+    def record_node_data(self,nl,itype,nsim,gen):
         """
         Run all functions required to record node data
         (for branches and lines).
@@ -2141,7 +2141,7 @@ class Tree():
             plt.title('all probabilities of fixation')
             plt.xlabel('value')
             plt.ylabel('frequency')
-            plt.savefig(os.getcwd()+sim_path+'allpfixes.png',
+            plt.savefig(os.getcwd()+self.sim_path+'allpfixes.png',
                         bbox_inches='tight')
             plt.rcParams["figure.figsize"] = \
                 plt.rcParamsDefault["figure.figsize"]
@@ -2209,7 +2209,7 @@ class Tree():
             with open (self.logfile,'a') as lf:
                 lf.write(S+'\n')
 
-    def make_runtime_string(start_time,stop_time):
+    def make_runtime_string(self,start_time,stop_time):
         """
         Make runtime component for foldernames.
 
@@ -2241,7 +2241,7 @@ class Tree():
         else:
             return np.std(x) / mu
 
-    def analyze_sims(self,exp_path):
+    def analyze_sims(self):
         """
         Excel files and heatmaps for average percent differences 
         and variance across simulations.
@@ -2270,9 +2270,9 @@ class Tree():
                 self.mostvals,ylabs,itype
             varpdiffs.columns,varpdiffs.index,varpdiffs.index.name = \
                 self.mostvals,ylabs,itype
-            avgpdiffs.to_excel(os.getcwd() + exp_path 
+            avgpdiffs.to_excel(os.getcwd() + self.exp_path 
                 + '{}_avgpdiffs_{}_sims.xlsx'.format(itype.lower(),self.num_sims))
-            varpdiffs.to_excel(os.getcwd() + exp_path 
+            varpdiffs.to_excel(os.getcwd() + self.exp_path 
                 + '{}_varpdiffs_{}_sims.xlsx'.format(itype.lower(),self.num_sims))
             for df,dtype in zip([avgpdiffs,varpdiffs],['Averages','Variances']):
                 hmdarray = np.asarray(df)
@@ -2286,7 +2286,7 @@ class Tree():
                           fontsize=36)
                 plt.ylabel(itype,fontsize=26)
                 plt.xlabel('Value',fontsize=26)
-                plt.savefig(os.getcwd() + exp_path + \
+                plt.savefig(os.getcwd() + self.exp_path + \
                         '{}_percent_diff_{}_heatmap.png'\
                         .format(itype.lower(),dtype.lower()),
                         bbox_inches='tight')
@@ -2835,15 +2835,15 @@ def experiment():
         .replace('-','')[2:-10]
 
     # Pathway to experiment folder.
-    exp_path = '/PEMPS_{}_{}/'.format(exptree.exp_note,exp_datetime_str)
-    if exp_path not in str(subprocess.run(['ls','-d',exp_path],
+    exptree.exp_path = '/PEMPS_{}_{}/'.format(exptree.exp_note,exp_datetime_str)
+    if exptree.exp_path not in str(subprocess.run(['ls','-d',exptree.exp_path],
                                         capture_output=True).stdout):
-        subprocess.run(['mkdir',os.getcwd()+exp_path])
+        subprocess.run(['mkdir',os.getcwd()+exptree.exp_path])
 
     # Log file.
     write_log_file = True
     if write_log_file:
-        exptree.logfile = os.getcwd() + exp_path + 'experiment__log.txt'.format(exptree.exp_note)
+        exptree.logfile = os.getcwd() + exptree.exp_path + 'experiment__log.txt'.format(exptree.exp_note)
         with open(exptree.logfile,'a') as lf:
             lf.write(exptree.exp_note + '_logfile\n\n')
             lf.write('commands:\n')
@@ -2855,11 +2855,11 @@ def experiment():
     exptree.prnt_msg('phylogenetic tree from ' + exptree.newick_filename)
 
     # Find branches in phylogeny.
-    exptree.find_branches(exp_path)
+    exptree.find_branches()
 
     # Create and equilibrate starting population.
     exptree.simulate(exptree.branch_dict[0])
-    exptree.record_equilibration_data(exptree.branch_dict[0],exp_path,gen=True)
+    exptree.record_equilibration_data(exptree.branch_dict[0],gen=True)
 
     # Relieve working memory of large data dictionary by reducing
     # it to information from final fixation.
@@ -2875,7 +2875,7 @@ def experiment():
     # Update data dict, reseting the generation count to 0.    
     exptree.branch_dict[0].data = {
         info:([exptree.branch_dict[0].data[info][-fixind]] if \
-            info != 'gens' else [0]) for info in data_labels}
+            info != 'gens' else [0]) for info in exptree.data_labels}
     # Jettison other info as well.
     exptree.branch_dict[0].fixed_eq_check_vals = None
     exptree.branch_dict[0].slopes_cvs = None
@@ -2895,23 +2895,23 @@ def experiment():
             .replace('-','')[2:-10]
         exptree.prnt_msg('\nStarting simulation {} at {}'.format(nsim,sim_datetime[:-7]))
         sim_folder = 'simulation_{}_{}/'.format(nsim,sim_datetime_str)
-        sim_path = exp_path + sim_folder
+        exptree.sim_path = exptree.exp_path + sim_folder
         if sim_folder not in str(subprocess.run(['ls','-d',sim_folder],
                                                 capture_output=True).stdout):
-            subprocess.run(['mkdir',os.getcwd()+sim_path])
+            subprocess.run(['mkdir',os.getcwd()+exptree.sim_path])
         simtree = dc(sim_tree_tmp)
+        simtree.sim_path = exptree.sim_path
         simtree.branch_dict[0].inherit(exptree.branch_dict[0])
         simtree.branch(simtree.branch_dict[0])
         sim_stop_time = datetime.now()
         sim_runtime_string = exptree.make_runtime_string(sim_start_time,sim_stop_time)
         exptree.prnt_msg('Finished simulation {} at {}, runtime: {}'\
                 .format(nsim,str(datetime.now())[:-7],sim_runtime_string))
-        simtree.record_node_data(simtree.branch_list[1:],sim_path,
-                                'Branch',nsim,True)
+        simtree.record_node_data(simtree.branch_list[1:],'Branch',nsim,True)
         simtree.trace_lines()
-        simtree.record_node_data(simtree.line_list,sim_path,'Line',nsim,True)
+        simtree.record_node_data(simtree.line_list,'Line',nsim,True)
     if exptree.num_sims > 1:
-        exptree.analyze_sims(exp_path)
+        exptree.analyze_sims(exptree.exp_path)
     exp_stop_time = datetime.now()
     exp_runtime_string = exptree.make_runtime_string(exp_start_time,exp_stop_time)
     exptree.prnt_msg('Finished experiment at {}, runtime: {}'\
