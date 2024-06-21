@@ -757,7 +757,7 @@ class Tree():
             model_params = basico.get_parameters()
             model_rxns = basico.get_reactions()
             for model_df in [model_species,model_params,model_rxns]:
-                if type(model_df) == None:
+                if model_df is None:
                     self.use_basico_method = False
                     self.prnt_msg('Basico not usable - proceding with other strategy')
             
@@ -1068,11 +1068,11 @@ class Tree():
             with open(import_cps_path,encoding='utf8') as nfile:
                 self.branch_dict[0].model = nfile.read()
             # Write as current file - will overwrite user cps input.
-            copasi_filename = 'import_{}.cps'.format(self.imp_eq_filename)
-            with open(copasi_filename,'w',encoding='utf8') as ncps:
+            self.copasi_filename = 'import_{}.cps'.format(self.imp_eq_filename)
+            with open(self.copasi_filename,'w',encoding='utf8') as ncps:
                 ncps.write(self.branch_dict[0].model)
             # Direct children to correct file.
-            self.branch_dict[0].heritable_copasi_filename = copasi_filename
+            self.branch_dict[0].heritable_copasi_filename = self.copasi_filename
 
         # First parse.
         self.initial_model_parse(self.branch_dict[0]) 
@@ -1133,14 +1133,14 @@ class Tree():
             # Check if equilibration is required.
             if self.equilibration == 'Y':
                 self.prnt_msg('\nequilibrating root population')
-                if eq_gens == 0:
+                if self.eq_gens == 0:
                     # Maximum of 1e6 generations to equilibrate.
                     node.gens = Tgens1 = node.gens + 1e6
                 else:
                     # User-defined number of generations.
                     imp_eq_gens = node.gens
                     gi = imp_eq_gens
-                    node.gens = Tgens1 = eq_gens + imp_eq_gens
+                    node.gens = Tgens1 = self.eq_gens + imp_eq_gens
             else:
                 self.prnt_msg('not equilibrating root population')
                 node.gens = 0
@@ -1202,7 +1202,7 @@ class Tree():
                     _ = subprocess.run([self.copasi_dir_str, self.copasi_filename, '-s',
                         self.copasi_filename],capture_output=True)
                     # Read model updates back into python.
-                    with open(copasi_filename,encoding='utf8') as cpsfile:
+                    with open(self.copasi_filename,encoding='utf8') as cpsfile:
                         node.model = cpsfile.read()
                         
                 # Parse the steady state output file.
@@ -1245,7 +1245,7 @@ class Tree():
                         ss_result = basico.task_steadystate.run_steadystate()
                     else:
                         node.model = old_model
-                        with open(copasi_filename,'w',encoding='utf8') as file:
+                        with open(self.copasi_filename,'w',encoding='utf8') as file:
                             file.write(node.model)
                         _ = subprocess.run([self.copasi_dir_str, self.copasi_filename, '-s',
                         self.copasi_filename],capture_output=True)
@@ -1346,7 +1346,7 @@ class Tree():
                                     if gi < 500_000:
                                         node.gens = int(gi*2)
                                     # Switch continuous print statement.
-                                    eq_gens = imp_eq_gens = 0
+                                    self.eq_gens = imp_eq_gens = 0
                                     self.prnt_msg(('\nequilibrium detected '
                                             + 'at generation {}\n').format(gi))
                         # Find no. generations concordant with 2% rule.
@@ -1378,18 +1378,18 @@ class Tree():
                                           + 'adequate no. proposals: {}{}')\
                                             .format(gi,' '*20))
 
-            if node.type == 'root' and eq_gens == 0:    
+            if node.type == 'root' and self.eq_gens == 0:    
                 # Continuous print statement to display progress.
                 print(('generation {}, fixations: {}, resets: {},'
                     + ' fit: {}, equilibration: {}/{} values{}').format(
                         gi,node.fix_count,node.rev_count,node.popfit,
                         sum(flatness_checks),flat_check_thresh,' '*20),
                         end='\r')
-            elif node.type == 'root' and eq_gens != 0:
+            elif node.type == 'root' and self.eq_gens != 0:
                 print(('generation {}/{}, fixations: {}, resets: {},'
                     + ' fit: {}, progress: {}%{}').format(gi,node.gens,
                     node.fix_count,node.rev_count,node.popfit,
-                    round((gi-imp_eq_gens)/(eq_gens)*100,3),
+                    round((gi-imp_eq_gens)/(self.eq_gens)*100,3),
                     ' '*20),end='\r')
             else:
                 # Continuous print statement to display progress.
@@ -1417,7 +1417,7 @@ class Tree():
                 ss_result = basico.task_steadystate.run_steadystate()
         else:
             node.model = model_at_last_fixation
-            with open(copasi_filename,'w',encoding='utf8') as file:
+            with open(self.copasi_filename,'w',encoding='utf8') as file:
                 file.write(node.model)
         # Assign generation number to root node.
         if node.type == 'root':
@@ -2206,7 +2206,7 @@ class Tree():
         """
         print(S)
         if self.write_log_file:
-            with open (logfile,'a') as lf:
+            with open (self.logfile,'a') as lf:
                 lf.write(S+'\n')
 
     def make_runtime_string(start_time,stop_time):
@@ -2843,11 +2843,11 @@ def experiment():
     # Log file.
     write_log_file = True
     if write_log_file:
-        logfile = os.getcwd() + exp_path + 'experiment__log.txt'.format(exp_note)
-        with open(logfile,'a') as lf:
-            lf.write(exp_note + '_logfile\n\n')
+        exptree.logfile = os.getcwd() + exp_path + 'experiment__log.txt'.format(exptree.exp_note)
+        with open(exptree.logfile,'a') as lf:
+            lf.write(exptree.exp_note + '_logfile\n\n')
             lf.write('commands:\n')
-            lf.write(ctext)
+            lf.write(exptree.ctext)
 
     # Experiment info.
     exptree.prnt_msg('\n\nBeginning experiment ' + exptree.exp_note + ' at ' + exp_datetime[:-7])
