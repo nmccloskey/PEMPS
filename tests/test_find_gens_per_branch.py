@@ -6,7 +6,7 @@ sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PE
 sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 
 def test_find_gens_per_branch():
-    from PEMPS_ import Tree, Node
+    from PEMPS import Tree, Node
 
     # Mocking the Node object with necessary attributes
     class MockNode:
