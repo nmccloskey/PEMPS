@@ -2250,7 +2250,8 @@ class Tree():
                 exp_path (str):
                     Folder pathway for experiment.
         """        
-        
+        assert len(self.branch_dfs) > 1, "Not enough data to analyze simulations."
+        assert len(self.line_dfs) > 1, "Not enough data to analyze simulations."
         # Loop over branch and line percent difference lists.
         for pdfl,itype in zip([self.branch_dfs,self.line_dfs],['Branch','Line']):
             # Create matrix of lists to stack dataframes.
@@ -2911,7 +2912,7 @@ def experiment():
         simtree.trace_lines()
         simtree.record_node_data(simtree.line_list,'Line',nsim,True)
     if exptree.num_sims > 1:
-        exptree.analyze_sims(exptree.exp_path)
+        exptree.analyze_sims()
     exp_stop_time = datetime.now()
     exp_runtime_string = exptree.make_runtime_string(exp_start_time,exp_stop_time)
     exptree.prnt_msg('Finished experiment at {}, runtime: {}'\
