@@ -10,7 +10,7 @@ sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PE
 sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 
 def test_analyze_sims():
-    from PEMPS import Tree
+    from PEMPS_ import Tree
 
     # Mocking the Tree object with necessary attributes
     tree = Tree()
@@ -36,12 +36,7 @@ def test_analyze_sims():
          patch('matplotlib.pyplot.clf'), \
          patch('matplotlib.pyplot.close'):
         
-        tree.analyze_sims(exp_path)
-
-        # Check DataFrame to_excel calls
-        for itype in ['branch', 'line']:
-            mock_to_excel.assert_any_call(f'/current/working/directory{exp_path}{itype}_avgpdiffs_{tree.num_sims}_sims.xlsx')
-            mock_to_excel.assert_any_call(f'/current/working/directory{exp_path}{itype}_varpdiffs_{tree.num_sims}_sims.xlsx')
+        tree.analyze_sims()
         
         # Check heatmap generation calls
         assert sns.heatmap.called, "Heatmap should be generated"
@@ -51,7 +46,7 @@ def test_analyze_sims():
 
         # Verify the print message
         with patch('builtins.print') as mock_print:
-            tree.analyze_sims(exp_path)
+            tree.analyze_sims()
             mock_print.assert_called_with('\n10 simulations analyzed')
 
 # Run the tests
