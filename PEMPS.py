@@ -2296,7 +2296,7 @@ class Tree():
                 plt.close()
         self.prnt_msg('\n{} simulations analyzed'.format(self.num_sims))
 
-    def extract_parname(rxn_parname):
+    def extract_parname(self,rxn_parname):
         """pull parameter name from Reaction_#_..."""
         i = re.search(r'Reaction\_\d+\_',rxn_parname).span(0)[1]
         return rxn_parname[i:]
@@ -2530,11 +2530,11 @@ class Node():
                 # basico.model_info.set_parameters(
                 basico.set_parameters(
                     name=model_param,initial_value=new_value,value=new_value)
-            if model_param in self.glob_par_dict:
-                new_value = self.glob_par_dict[model_param]
-                # basico.model_info.set_parameters(
-                basico.set_parameters(
-                    name=model_param,initial_value=new_value,value=new_value)
+                if model_param in self.glob_par_dict:
+                    new_value = self.glob_par_dict[model_param]
+                    # basico.model_info.set_parameters(
+                    basico.set_parameters(
+                        name=model_param,initial_value=new_value,value=new_value)
             for model_param,init_conc in zip(self.tree.spec_labels,self.spec_concs):
                 basico.set_species(name=model_param,concentration=init_conc,initial_concentration=init_conc)
         
