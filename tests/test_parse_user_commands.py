@@ -1,6 +1,6 @@
 from unittest.mock import mock_open, patch
 import sys
-sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
+sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 import pytest
 # Set the matplotlib backend to a suitable one for the testing environment
 import matplotlib
@@ -30,12 +30,13 @@ def mock_commands_file():
         "Haldane (Y/n): Y\n"
         "SE directory: CopasiSE.exe\n"
         "BasiCO method (Y/n): Y\n"
+        "flux proportionalization multiplier: 1\n"
     )
     return commands_content
 
 def test_parse_user_commands(mock_commands_file):
     with patch("builtins.open", mock_open(read_data=mock_commands_file)):
-        from PEMPS import Tree  # Import here to avoid potential circular import issues
+        from PEMPS_ import Tree  # Import here to avoid potential circular import issues
 
         # Creating a Tree object and calling the parse_user_commands method
         tree = Tree()
