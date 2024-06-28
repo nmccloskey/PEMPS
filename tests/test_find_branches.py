@@ -10,7 +10,7 @@ sys.path.append('C:\\Users\\tuf61393\\OneDrive - Temple University\\BinfoPSM\\PE
 sys.path.append('C:\\Users\\mcclo\\OneDrive - Temple University\\BinfoPSM\\PEMPS')
 
 def test_find_branches():
-    from PEMPS import Tree, Node
+    from PEMPS_ import Tree, Node
 
     # Mocking the Node object with necessary attributes
     class MockNode:
@@ -47,7 +47,7 @@ def test_find_branches():
         mock_tree = MagicMock()
         mock_get.return_value = mock_tree
         
-        tree.find_branches(exp_path)
+        tree.find_branches()
 
         # Verify some of the logic (like adding nodes and setting properties)
         assert len(tree.branch_list) > 0, "Branch list should not be empty"
