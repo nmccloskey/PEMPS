@@ -2232,7 +2232,7 @@ class Tree():
             runtime_string = str(round(runtime,1)) + 'sec'
         return runtime_string
 
-    def calc_cv(x):
+    def calc_cv(self, x):
         """Return coefficient of variation of series/list x."""
         mu = np.mean(x)
         # avoid divide by 0
