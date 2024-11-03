@@ -1437,8 +1437,8 @@ class Tree():
           to generations per branch."""
         # Autodetection based on 2% rule threshold.
         if self.sim_gens == 0:
-            # # Branch length measurement type-dependent multiplier.
-            # mult = 1 # 0.01
+            # Branch length measurement type-dependent multiplier.
+            mult = 1
             if self.branch_length_type == 'subs per site':
                 # Convert branch lengths to percentages.
                 mult = 100
